@@ -71,6 +71,7 @@ export default async function EditEntryPage({
             cost: entry.cost,
             gallons: entry.gallons,
             is_full_tank: entry.is_full_tank,
+            fuel_grade: entry.fuel_grade,
           }}
           onSubmit={handleUpdate}
           submitLabel="Save changes"

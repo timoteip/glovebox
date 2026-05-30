@@ -16,7 +16,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export type EntryFormDefaults = Pick<
   Entry,
-  "type" | "date" | "odometer" | "title" | "description" | "cost" | "gallons" | "is_full_tank"
+  "type" | "date" | "odometer" | "title" | "description" | "cost" | "gallons" | "is_full_tank" | "fuel_grade"
 >;
 
 interface Props {
@@ -164,6 +164,20 @@ export function EntryForm({
               defaultValue={defaultValues?.gallons ?? ""}
               className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
             />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Grade
+            <select
+              name="fuel_grade"
+              defaultValue={defaultValues?.fuel_grade ?? ""}
+              className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
+            >
+              <option value="">— select —</option>
+              <option value="Regular (87)">Regular (87)</option>
+              <option value="Mid-grade (88–90)">Mid-grade (88–90)</option>
+              <option value="Premium (91–94)">Premium (91–94)</option>
+              <option value="Diesel">Diesel</option>
+            </select>
           </label>
           <label className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
             <input

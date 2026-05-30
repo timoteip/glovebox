@@ -99,6 +99,9 @@ function EntryRow({ entry, vehicleId }: { entry: Entry; vehicleId: string }) {
           {entry.gallons != null && (
             <span>{entry.gallons} gal</span>
           )}
+          {entry.fuel_grade && (
+            <span>{entry.fuel_grade}</span>
+          )}
           {entry.is_full_tank === false && (
             <span className="text-zinc-400 dark:text-zinc-600">partial fill</span>
           )}

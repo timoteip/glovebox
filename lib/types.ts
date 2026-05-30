@@ -24,5 +24,6 @@ export interface Entry {
   cost: number | null;
   gallons: number | null; // fuel only
   is_full_tank: boolean | null; // fuel only
+  fuel_grade: string | null; // fuel only
   created_at: string;
 }

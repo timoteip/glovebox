@@ -26,6 +26,7 @@ export async function updateEntry(
   const cost = formData.get("cost") ? Number(formData.get("cost")) : null;
   const gallons = formData.get("gallons") ? Number(formData.get("gallons")) : null;
   const is_full_tank = type === "fuel" ? formData.get("is_full_tank") === "on" : null;
+  const fuel_grade = type === "fuel" ? (String(formData.get("fuel_grade") ?? "").trim() || null) : null;
 
   const autoTitle = type === "mileage" ? "Mileage reading" : type === "fuel" ? "Fill-up" : title;
   if (!date || (!autoTitle && !title)) return;
@@ -41,6 +42,7 @@ export async function updateEntry(
       cost,
       gallons,
       is_full_tank,
+      fuel_grade,
     })
     .eq("id", entryId);
 
