@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { addEntry } from "./actions";
-import type { EntryType } from "@/lib/types";
+import type { Entry, EntryType } from "@/lib/types";
 
 const TYPES: { value: EntryType; label: string }[] = [
   { value: "service", label: "Service" },
@@ -14,9 +14,28 @@ const TYPES: { value: EntryType; label: string }[] = [
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export function EntryForm({ vehicleId }: { vehicleId: string }) {
+export type EntryFormDefaults = Pick<
+  Entry,
+  "type" | "date" | "odometer" | "title" | "description" | "cost" | "gallons" | "is_full_tank"
+>;
+
+interface Props {
+  vehicleId: string;
+  // When provided, form is in "add" mode using these as initial values.
+  // Edit mode uses a separate action passed via onSubmit.
+  defaultValues?: EntryFormDefaults;
+  onSubmit?: (formData: FormData) => Promise<void>;
+  submitLabel?: string;
+}
+
+export function EntryForm({
+  vehicleId,
+  defaultValues,
+  onSubmit,
+  submitLabel = "Add entry",
+}: Props) {
   const formRef = useRef<HTMLFormElement>(null);
-  const [type, setType] = useState<EntryType>("service");
+  const [type, setType] = useState<EntryType>(defaultValues?.type ?? "service");
 
   const showTitle = type !== "mileage";
   const showDescription = type === "service" || type === "part" || type === "note";
@@ -25,9 +44,13 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
   const showFuel = type === "fuel";
 
   async function handleSubmit(formData: FormData) {
-    await addEntry(vehicleId, formData);
-    formRef.current?.reset();
-    setType("service");
+    if (onSubmit) {
+      await onSubmit(formData);
+    } else {
+      await addEntry(vehicleId, formData);
+      formRef.current?.reset();
+      setType("service");
+    }
   }
 
   return (
@@ -58,7 +81,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
           name="date"
           type="date"
           required
-          defaultValue={today()}
+          defaultValue={defaultValues?.date ?? today()}
           className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
         />
       </label>
@@ -72,6 +95,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
             type="number"
             min={0}
             placeholder="45000"
+            defaultValue={defaultValues?.odometer ?? ""}
             className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
           />
         </label>
@@ -94,6 +118,9 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
                     ? "Fill-up"
                     : "Note"
             }
+            defaultValue={
+              defaultValues?.type === type ? (defaultValues?.title ?? "") : ""
+            }
             className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
           />
         </label>
@@ -107,6 +134,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
             name="description"
             rows={2}
             placeholder="Optional details…"
+            defaultValue={defaultValues?.description ?? ""}
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
           />
         </label>
@@ -122,6 +150,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
             min={0}
             step="0.01"
             placeholder="0.00"
+            defaultValue={defaultValues?.cost ?? ""}
             className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
           />
         </label>
@@ -138,6 +167,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
               min={0}
               step="0.001"
               placeholder="12.345"
+              defaultValue={defaultValues?.gallons ?? ""}
               className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
             />
           </label>
@@ -145,7 +175,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
             <input
               name="is_full_tank"
               type="checkbox"
-              defaultChecked
+              defaultChecked={defaultValues?.is_full_tank ?? true}
               className="h-4 w-4 rounded border-zinc-300"
             />
             Full tank
@@ -157,7 +187,7 @@ export function EntryForm({ vehicleId }: { vehicleId: string }) {
         type="submit"
         className="mt-1 h-12 rounded-lg bg-zinc-900 px-4 font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
-        Add entry
+        {submitLabel}
       </button>
     </form>
   );
