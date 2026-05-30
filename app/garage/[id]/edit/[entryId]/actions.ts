@@ -27,14 +27,15 @@ export async function updateEntry(
   const gallons = formData.get("gallons") ? Number(formData.get("gallons")) : null;
   const is_full_tank = type === "fuel" ? formData.get("is_full_tank") === "on" : null;
 
-  if (!date || (type !== "mileage" && !title)) return;
+  const autoTitle = type === "mileage" ? "Mileage reading" : type === "fuel" ? "Fill-up" : title;
+  if (!date || (!autoTitle && !title)) return;
 
   const { error } = await supabase
     .from("entries")
     .update({
       type,
       date,
-      title: type === "mileage" ? "Mileage reading" : title,
+      title: autoTitle,
       description,
       odometer,
       cost,

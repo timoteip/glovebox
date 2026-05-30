@@ -37,7 +37,7 @@ export function EntryForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [type, setType] = useState<EntryType>(defaultValues?.type ?? "service");
 
-  const showTitle = type !== "mileage";
+  const showTitle = type !== "mileage" && type !== "fuel";
   const showDescription = type === "service" || type === "part" || type === "note";
   const showCost = type === "service" || type === "part" || type === "fuel";
   const showOdometer = type !== "note";
@@ -110,13 +110,7 @@ export function EntryForm({
             type="text"
             required={showTitle}
             placeholder={
-              type === "service"
-                ? "Oil change"
-                : type === "part"
-                  ? "Air filter"
-                  : type === "fuel"
-                    ? "Fill-up"
-                    : "Note"
+              type === "service" ? "Oil change" : type === "part" ? "Air filter" : "Note"
             }
             defaultValue={
               defaultValues?.type === type ? (defaultValues?.title ?? "") : ""
