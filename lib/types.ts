@@ -1,5 +1,6 @@
 // Shared DB row types. Mirrors schema.sql.
 
+
 export type EntryType = "service" | "part" | "fuel" | "mileage" | "note";
 
 export interface Vehicle {
@@ -10,6 +11,15 @@ export interface Vehicle {
   model: string;
   nickname: string | null;
   vin: string | null;
+  created_at: string;
+}
+
+export interface Reminder {
+  id: string;
+  vehicle_id: string;
+  name: string;
+  due_miles: number | null;
+  due_date: string | null; // ISO date (YYYY-MM-DD)
   created_at: string;
 }
 

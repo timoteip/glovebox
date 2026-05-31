@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EntryForm } from "./entry-form";
 import { DeleteEntryButton } from "./delete-entry-button";
+import { RemindersSection } from "./reminders-section";
 import type { Entry, EntryType } from "@/lib/types";
 
 const TYPE_STYLES: Record<EntryType, { label: string; classes: string }> = {
@@ -163,15 +164,24 @@ export default async function VehiclePage({
 
   if (!vehicle) notFound();
 
-  const { data: entries } = await supabase
-    .from("entries")
-    .select("*")
-    .eq("vehicle_id", id)
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false });
+  const [{ data: entries }, { data: reminders }] = await Promise.all([
+    supabase
+      .from("entries")
+      .select("*")
+      .eq("vehicle_id", id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("reminders")
+      .select("*")
+      .eq("vehicle_id", id)
+      .order("created_at", { ascending: true }),
+  ]);
 
   const allEntries = entries ?? [];
+  const allReminders = reminders ?? [];
   const stats = computeStats(allEntries);
+  const today = new Date().toISOString().slice(0, 10);
 
   const vehicleTitle = [vehicle.year, vehicle.make, vehicle.model]
     .filter(Boolean)
@@ -238,6 +248,14 @@ export default async function VehiclePage({
             </span>
           </div>
         </div>
+
+        {/* Reminders */}
+        <RemindersSection
+          vehicleId={id}
+          reminders={allReminders}
+          currentMileage={stats.currentMileage}
+          today={today}
+        />
 
         {/* Timeline */}
         <h2 className="mb-1 mt-8 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
