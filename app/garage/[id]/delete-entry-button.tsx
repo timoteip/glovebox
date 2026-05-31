@@ -24,7 +24,7 @@ export function DeleteEntryButton({
       onClick={handleDelete}
       disabled={pending}
       aria-label={`Remove ${title}`}
-      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
+      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-zinc-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:text-zinc-600 dark:hover:bg-red-950 dark:hover:text-red-400"
     >
       {pending ? (
         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />

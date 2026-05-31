@@ -144,31 +144,26 @@ export default async function VehiclePage({
 
         {/* Stats */}
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-              {stats.currentMileage != null
-                ? stats.currentMileage.toLocaleString()
-                : "—"}
+          <div className="flex flex-col rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Mileage</span>
+            <span className="mt-1 text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50 leading-none">
+              {stats.currentMileage != null ? stats.currentMileage.toLocaleString() : "—"}
             </span>
-            <span className="mt-0.5 text-center text-xs text-zinc-500 dark:text-zinc-400">
-              Current mileage
-            </span>
+            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">miles</span>
           </div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-              {stats.avgMpg != null ? `${stats.avgMpg.toFixed(1)}` : "—"}
+          <div className="flex flex-col rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Avg MPG</span>
+            <span className="mt-1 text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50 leading-none">
+              {stats.avgMpg != null ? stats.avgMpg.toFixed(1) : "—"}
             </span>
-            <span className="mt-0.5 text-center text-xs text-zinc-500 dark:text-zinc-400">
-              Avg MPG
-            </span>
+            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">mpg</span>
           </div>
-          <div className="flex flex-col items-center rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <span className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          <div className="flex flex-col rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Spent</span>
+            <span className="mt-1 text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50 leading-none">
               ${stats.totalSpent.toFixed(0)}
             </span>
-            <span className="mt-0.5 text-center text-xs text-zinc-500 dark:text-zinc-400">
-              Total spent
-            </span>
+            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">total</span>
           </div>
         </div>
 
