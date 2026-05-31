@@ -14,6 +14,11 @@ export interface Vehicle {
   created_at: string;
 }
 
+export interface UserPreferences {
+  user_id: string;
+  default_vehicle_id: string | null;
+}
+
 export interface Reminder {
   id: string;
   vehicle_id: string;

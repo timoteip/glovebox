@@ -139,6 +139,24 @@ create policy "reminders_delete_own" on public.reminders
     )
   );
 
+-- ---------- USER PREFERENCES ----------
+create table public.user_preferences (
+  user_id            uuid primary key references auth.users (id) on delete cascade,
+  default_vehicle_id uuid references public.vehicles (id) on delete set null
+);
+
+alter table public.user_preferences enable row level security;
+
+create policy "prefs_select_own" on public.user_preferences
+  for select using (user_id = auth.uid());
+
+create policy "prefs_insert_own" on public.user_preferences
+  for insert with check (user_id = auth.uid());
+
+create policy "prefs_update_own" on public.user_preferences
+  for update using (user_id = auth.uid())
+               with check (user_id = auth.uid());
+
 -- ---------- MIGRATIONS (run after initial setup) ----------
 -- alter table public.entries add column fuel_grade text;
--- (run the create table public.reminders block above as a migration)
+-- (run the create table blocks for reminders and user_preferences as migrations)

@@ -4,6 +4,26 @@ import Link from "next/link";
 import { useTransition } from "react";
 import type { Vehicle } from "@/lib/types";
 import { deleteVehicle } from "./actions";
+import { setDefaultVehicle } from "./default-vehicle-action";
+
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
 
 function PencilIcon() {
   return (
@@ -48,8 +68,17 @@ function TrashIcon() {
   );
 }
 
-export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
-  const [pending, startTransition] = useTransition();
+export function VehicleCard({
+  vehicle,
+  isDefault,
+  showDefault,
+}: {
+  vehicle: Vehicle;
+  isDefault: boolean;
+  showDefault: boolean;
+}) {
+  const [deletePending, startDeleteTransition] = useTransition();
+  const [defaultPending, startDefaultTransition] = useTransition();
 
   const title = [vehicle.year, vehicle.make, vehicle.model]
     .filter(Boolean)
@@ -58,7 +87,13 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   function handleDelete() {
     if (!confirm(`Remove ${title}? This will delete all its entries too.`))
       return;
-    startTransition(() => deleteVehicle(vehicle.id));
+    startDeleteTransition(() => deleteVehicle(vehicle.id));
+  }
+
+  function handleToggleDefault() {
+    startDefaultTransition(() =>
+      setDefaultVehicle(isDefault ? null : vehicle.id),
+    );
   }
 
   return (
@@ -83,6 +118,21 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
       </Link>
 
       <div className="ml-3 flex flex-shrink-0 items-center gap-1">
+        {showDefault && (
+          <button
+            onClick={handleToggleDefault}
+            disabled={defaultPending}
+            aria-label={isDefault ? `Remove ${title} as default` : `Set ${title} as default`}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${
+              isDefault
+                ? "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950"
+                : "text-zinc-400 hover:bg-zinc-100 hover:text-amber-500 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <StarIcon filled={isDefault} />
+          </button>
+        )}
+
         <Link
           href={`/garage/${vehicle.id}/edit-vehicle`}
           aria-label={`Edit ${title}`}
@@ -93,11 +143,11 @@ export function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 
         <button
           onClick={handleDelete}
-          disabled={pending}
+          disabled={deletePending}
           aria-label={`Remove ${title}`}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-950 dark:hover:text-red-400"
         >
-          {pending ? (
+          {deletePending ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
           ) : (
             <TrashIcon />

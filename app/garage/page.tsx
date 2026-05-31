@@ -12,12 +12,15 @@ export default async function GaragePage() {
 
   if (!user) redirect("/login");
 
-  const { data: vehicles, error } = await supabase
-    .from("vehicles")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data: vehicles, error }, { data: prefs }] = await Promise.all([
+    supabase.from("vehicles").select("*").order("created_at", { ascending: false }),
+    supabase.from("user_preferences").select("default_vehicle_id").eq("user_id", user.id).maybeSingle(),
+  ]);
 
   if (error) throw new Error(error.message);
+
+  const defaultVehicleId = prefs?.default_vehicle_id ?? null;
+  const showDefault = (vehicles?.length ?? 0) > 1;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -44,7 +47,11 @@ export default async function GaragePage() {
           <ul className="mb-8 flex flex-col gap-3">
             {vehicles.map((v) => (
               <li key={v.id}>
-                <VehicleCard vehicle={v} />
+                <VehicleCard
+                vehicle={v}
+                isDefault={v.id === defaultVehicleId}
+                showDefault={showDefault}
+              />
               </li>
             ))}
           </ul>
