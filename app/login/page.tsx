@@ -62,14 +62,6 @@ export default async function LoginPage({
           >
             Sign in
           </button>
-          <div className="text-right">
-            <a
-              href="/forgot-password"
-              className="text-xs text-zinc-500 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              Forgot password?
-            </a>
-          </div>
           <button
             formAction={signUp}
             className="h-12 rounded-lg border border-zinc-300 px-4 font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
@@ -77,6 +69,15 @@ export default async function LoginPage({
             Create account
           </button>
         </form>
+
+        <div className="mt-3 text-right">
+          <a
+            href="/forgot-password"
+            className="text-xs text-zinc-500 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-50"
+          >
+            Forgot password?
+          </a>
+        </div>
 
         <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-wide text-zinc-400">
           <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
