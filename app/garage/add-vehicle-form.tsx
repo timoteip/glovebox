@@ -1,14 +1,18 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useTransition } from "react";
 import { addVehicle } from "./actions";
 
-export function AddVehicleForm() {
+export function AddVehicleForm({ onSuccess }: { onSuccess?: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [pending, startTransition] = useTransition();
 
-  async function handleSubmit(formData: FormData) {
-    await addVehicle(formData);
-    formRef.current?.reset();
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      await addVehicle(formData);
+      formRef.current?.reset();
+      onSuccess?.();
+    });
   }
 
   return (
@@ -71,9 +75,10 @@ export function AddVehicleForm() {
 
       <button
         type="submit"
-        className="mt-1 h-12 rounded-lg bg-zinc-900 px-4 font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        disabled={pending}
+        className="mt-1 h-12 rounded-lg bg-zinc-900 px-4 font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
       >
-        Add vehicle
+        {pending ? "Adding…" : "Add vehicle"}
       </button>
     </form>
   );
