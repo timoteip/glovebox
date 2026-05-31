@@ -201,7 +201,13 @@ export default async function VehiclePage({
           {vehicle.nickname ?? vehicleTitle}
         </span>
 
-        <form action="/auth/signout" method="post" className="ml-auto">
+        <Link
+          href={`/garage/${id}/charts`}
+          className="ml-auto mr-2 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          Charts
+        </Link>
+        <form action="/auth/signout" method="post">
           <button
             type="submit"
             className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
