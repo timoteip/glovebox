@@ -51,7 +51,7 @@ export function MpgChart({ data }: { data: MpgPoint[] }) {
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} unit=" mpg" />
         <Tooltip
           contentStyle={TOOLTIP_STYLE}
-          formatter={(v: number) => [`${v.toFixed(1)} mpg`, "MPG"]}
+          formatter={(v) => [`${(v as number).toFixed(1)} mpg`, "MPG"]}
         />
         <Line
           type="monotone"
@@ -83,7 +83,7 @@ export function MonthlyCostChart({ data }: { data: CostPoint[] }) {
         <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
         <Tooltip
           contentStyle={TOOLTIP_STYLE}
-          formatter={(v: number) => [`$${v.toFixed(2)}`, "Cost"]}
+          formatter={(v) => [`$${(v as number).toFixed(2)}`, "Cost"]}
         />
         <Bar dataKey="cost" fill="#10b981" radius={[4, 4, 0, 0]} />
       </BarChart>
@@ -112,7 +112,7 @@ export function CostByTypeChart({ data }: { data: CostByType[] }) {
         <YAxis type="category" dataKey="type" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={52} />
         <Tooltip
           contentStyle={TOOLTIP_STYLE}
-          formatter={(v: number) => [`$${v.toFixed(2)}`, "Total"]}
+          formatter={(v) => [`$${(v as number).toFixed(2)}`, "Total"]}
         />
         <Bar dataKey="cost" fill="#f59e0b" radius={[0, 4, 4, 0]} />
       </BarChart>
