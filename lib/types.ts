@@ -11,6 +11,7 @@ export interface Vehicle {
   model: string;
   nickname: string | null;
   vin: string | null;
+  photo_url: string | null;
   created_at: string;
 }
 
@@ -38,6 +39,8 @@ export interface Entry {
   description: string | null;
   cost: number | null;
   gallons: number | null; // fuel only
+  trip_miles: number | null; // fuel only — trip odometer reading reset at each fill-up
+  mpg: number | null; // fuel only — stored directly when raw data isn't available
   is_full_tank: boolean | null; // fuel only
   fuel_grade: string | null; // fuel only
   created_at: string;
