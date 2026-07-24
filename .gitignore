@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local tooling
+.playwright-mcp/
+conventions.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
