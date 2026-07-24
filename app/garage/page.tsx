@@ -13,7 +13,7 @@ export default async function GaragePage() {
   if (!user) redirect("/login");
 
   const [{ data: vehicles, error }, { data: prefs }] = await Promise.all([
-    supabase.from("vehicles").select("*").order("created_at", { ascending: false }),
+    supabase.from("vehicles").select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: true }),
     supabase.from("user_preferences").select("default_vehicle_id").eq("user_id", user.id).maybeSingle(),
   ]);
 
@@ -45,12 +45,14 @@ export default async function GaragePage() {
 
         {vehicles && vehicles.length > 0 ? (
           <ul className="flex flex-col gap-3">
-            {vehicles.map((v) => (
+            {vehicles.map((v, i) => (
               <li key={v.id}>
                 <VehicleCard
                   vehicle={v}
                   isDefault={v.id === defaultVehicleId}
                   showDefault={showDefault}
+                  index={i}
+                  total={vehicles.length}
                 />
               </li>
             ))}
