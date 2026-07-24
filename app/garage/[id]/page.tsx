@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { EntryForm } from "./entry-form";
+import { EntrySheet } from "./entry-sheet";
 import { RemindersSection } from "./reminders-section";
 import { TimelineSection } from "./timeline-section";
 import type { Entry } from "@/lib/types";
@@ -19,28 +19,33 @@ function computeStats(entries: Entry[]): Stats {
   const currentMileage =
     odometerReadings.length > 0 ? Math.max(...odometerReadings) : null;
 
-  const fullTankFuels = entries
-    .filter(
-      (e) =>
-        e.type === "fuel" &&
-        e.is_full_tank === true &&
-        e.odometer != null &&
-        e.gallons != null,
-    )
-    .sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0));
+  // Per-entry MPG: stored mpg > calculated from trip_miles/gallons > odometer fallback
+  const entryMpgs = entries
+    .filter((e) => e.type === "fuel")
+    .map((e): number | null => {
+      if (e.mpg != null && e.mpg > 0) return e.mpg;
+      if (e.trip_miles != null && e.trip_miles > 0 && e.gallons != null && e.gallons > 0) return e.trip_miles / e.gallons;
+      return null;
+    })
+    .filter((v): v is number => v !== null);
 
-  let avgMpg: number | null = null;
-  if (fullTankFuels.length >= 2) {
-    const segments: number[] = [];
+  // Odometer-based fallback (for entries with neither mpg nor trip_miles)
+  const odometerMpgs: number[] = [];
+  if (entryMpgs.length === 0) {
+    const fullTankFuels = entries
+      .filter((e) => e.type === "fuel" && e.mpg == null && e.trip_miles == null && e.is_full_tank === true && e.odometer != null && e.gallons != null)
+      .sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0));
     for (let i = 1; i < fullTankFuels.length; i++) {
-      const miles =
-        (fullTankFuels[i].odometer ?? 0) - (fullTankFuels[i - 1].odometer ?? 0);
+      const miles = (fullTankFuels[i].odometer ?? 0) - (fullTankFuels[i - 1].odometer ?? 0);
       const gallons = fullTankFuels[i].gallons ?? 0;
-      if (gallons > 0 && miles > 0) segments.push(miles / gallons);
+      if (gallons > 0 && miles > 0) odometerMpgs.push(miles / gallons);
     }
-    if (segments.length > 0)
-      avgMpg = segments.reduce((a, b) => a + b, 0) / segments.length;
   }
+
+  const allMpgs = entryMpgs.length > 0 ? entryMpgs : odometerMpgs;
+  const avgMpg = allMpgs.length > 0
+    ? allMpgs.reduce((a, b) => a + b, 0) / allMpgs.length
+    : null;
 
   const totalSpent = entries.reduce((sum, e) => sum + (e.cost ?? 0), 0);
 
@@ -132,7 +137,18 @@ export default async function VehiclePage({
         </form>
       </header>
 
-      <div className="mx-auto w-full max-w-lg flex-1 px-4 py-6">
+      {vehicle.photo_url && (
+        <div className="relative h-52 w-full overflow-hidden">
+          <img
+            src={vehicle.photo_url}
+            alt={vehicleTitle}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-32 py-6">
         <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
           {vehicleTitle}
         </h1>
@@ -178,14 +194,9 @@ export default async function VehiclePage({
         {/* Timeline with filter */}
         <TimelineSection entries={allEntries} vehicleId={id} />
 
-        {/* Add entry form */}
-        <div className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Add an entry
-          </h2>
-          <EntryForm vehicleId={id} />
-        </div>
       </div>
+
+      <EntrySheet vehicleId={id} />
     </main>
   );
 }
