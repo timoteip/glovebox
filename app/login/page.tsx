@@ -26,7 +26,7 @@ export default async function LoginPage({
             Glovebox
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Your car&apos;s whole history, in one place.
+            Your car&apos;s whole history, in one place. Sign in to continue or create an account.
           </p>
         </div>
 
