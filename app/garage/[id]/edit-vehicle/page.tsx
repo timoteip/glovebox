@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateVehicle } from "./actions";
+import { PhotoUpload } from "./photo-upload";
 
 export default async function EditVehiclePage({
   params,
@@ -51,43 +52,52 @@ export default async function EditVehiclePage({
 
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <form action={handleUpdate} className="flex flex-col gap-3">
+          <PhotoUpload currentUrl={vehicle.photo_url ?? null} />
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Year
+            <div className="flex flex-col gap-1">
+              <label htmlFor="year" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Year</label>
               <input
+                id="year"
                 name="year"
-                type="number"
-                min={1900}
-                max={new Date().getFullYear() + 1}
+                type="text"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
                 defaultValue={vehicle.year ?? ""}
                 placeholder="2019"
-                className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
+                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Make <span className="text-red-500">*</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="make" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Make <span className="text-red-500">*</span>
+              </label>
               <input
+                id="make"
                 name="make"
                 type="text"
                 required
                 defaultValue={vehicle.make}
                 placeholder="Toyota"
-                className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
+                className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
               />
-            </label>
+            </div>
           </div>
 
-          <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Model <span className="text-red-500">*</span>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="model" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Model <span className="text-red-500">*</span>
+            </label>
             <input
+              id="model"
               name="model"
               type="text"
               required
               defaultValue={vehicle.model}
               placeholder="Camry"
-              className="h-11 rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
+              className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-400"
             />
-          </label>
+          </div>
 
           <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Nickname

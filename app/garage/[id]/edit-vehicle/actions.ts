@@ -3,6 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+
+const adminStorage = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 export async function updateVehicle(vehicleId: string, formData: FormData) {
   const supabase = await createClient();
@@ -21,9 +27,31 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
 
   if (!make || !model) return;
 
+  // Handle photo
+  let photo_url: string | null | undefined = undefined;
+  const removePhoto = formData.get("remove_photo") === "true";
+  const photoFile = formData.get("photo") as File | null;
+
+  if (removePhoto) {
+    await adminStorage.storage.from("vehicle-photos").remove([vehicleId]);
+    photo_url = null;
+  } else if (photoFile && photoFile.size > 0) {
+    const { error: uploadError } = await adminStorage.storage
+      .from("vehicle-photos")
+      .upload(vehicleId, photoFile, { contentType: photoFile.type, upsert: true });
+    if (uploadError) throw new Error(`Photo upload failed: ${uploadError.message}`);
+    const { data: { publicUrl } } = adminStorage.storage
+      .from("vehicle-photos")
+      .getPublicUrl(vehicleId);
+    photo_url = publicUrl;
+  }
+
+  const updateData: Record<string, unknown> = { year, make, model, nickname, vin };
+  if (photo_url !== undefined) updateData.photo_url = photo_url;
+
   const { error } = await supabase
     .from("vehicles")
-    .update({ year, make, model, nickname, vin })
+    .update(updateData)
     .eq("id", vehicleId);
 
   if (error) throw new Error(error.message);
