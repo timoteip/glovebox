@@ -70,6 +70,8 @@ export default async function EditEntryPage({
             description: entry.description,
             cost: entry.cost,
             gallons: entry.gallons,
+            trip_miles: entry.trip_miles,
+            mpg: entry.mpg,
             is_full_tank: entry.is_full_tank,
             fuel_grade: entry.fuel_grade,
           }}

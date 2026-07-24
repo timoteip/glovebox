@@ -60,9 +60,15 @@ function EntryRow({ entry, vehicleId }: { entry: Entry; vehicleId: string }) {
           </span>
         )}
 
-        <div className="flex gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="flex flex-wrap gap-3 text-sm text-zinc-500 dark:text-zinc-400">
           {entry.cost != null && <span>${entry.cost.toFixed(2)}</span>}
           {entry.gallons != null && <span>{entry.gallons} gal</span>}
+          {entry.trip_miles != null && entry.gallons != null && entry.gallons > 0 && (
+            <span>{entry.trip_miles} mi trip · {(entry.trip_miles / entry.gallons).toFixed(1)} mpg</span>
+          )}
+          {entry.trip_miles == null && entry.mpg != null && (
+            <span>{entry.mpg.toFixed(1)} mpg</span>
+          )}
           {entry.fuel_grade && <span>{entry.fuel_grade}</span>}
           {entry.is_full_tank === false && (
             <span className="text-zinc-400 dark:text-zinc-600">partial fill</span>

@@ -6,21 +6,32 @@ import { MpgChart, MonthlyCostChart, CostByTypeChart } from "./charts-view";
 import type { MpgPoint, CostPoint, CostByType } from "./charts-view";
 
 function buildMpgData(entries: Entry[]): MpgPoint[] {
+  const fmtLabel = (e: Entry) =>
+    new Date(e.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  // Per-entry: stored mpg > trip_miles/gallons
+  const perEntry = entries
+    .filter((e) => e.type === "fuel")
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .flatMap((e): MpgPoint[] => {
+      if (e.mpg != null && e.mpg > 0) return [{ label: fmtLabel(e), mpg: e.mpg }];
+      if (e.trip_miles != null && e.trip_miles > 0 && e.gallons != null && e.gallons > 0)
+        return [{ label: fmtLabel(e), mpg: e.trip_miles / e.gallons }];
+      return [];
+    });
+
+  if (perEntry.length > 0) return perEntry;
+
+  // Odometer fallback
   const fullTanks = entries
-    .filter((e) => e.type === "fuel" && e.is_full_tank === true && e.odometer != null && e.gallons != null)
+    .filter((e) => e.type === "fuel" && e.mpg == null && e.trip_miles == null && e.is_full_tank === true && e.odometer != null && e.gallons != null)
     .sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0));
 
   const points: MpgPoint[] = [];
   for (let i = 1; i < fullTanks.length; i++) {
     const miles = (fullTanks[i].odometer ?? 0) - (fullTanks[i - 1].odometer ?? 0);
     const gallons = fullTanks[i].gallons ?? 0;
-    if (gallons > 0 && miles > 0) {
-      const label = new Date(fullTanks[i].date + "T00:00:00").toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-      points.push({ label, mpg: miles / gallons });
-    }
+    if (gallons > 0 && miles > 0) points.push({ label: fmtLabel(fullTanks[i]), mpg: miles / gallons });
   }
   return points;
 }
