@@ -49,38 +49,33 @@ export function AddVehicleSheet() {
         aria-hidden="true"
       />
 
-      {/* ── Sheet ── */}
+      {/* ── Centered modal ── */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Add a vehicle"
-        className={`fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out dark:bg-zinc-950 ${
-          open ? "translate-y-0" : "translate-y-full"
+        className={`fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl transition-all duration-200 dark:bg-zinc-950 ${
+          open ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-95"
         }`}
       >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+            Add a vehicle
+          </h2>
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
-        <div className="mx-auto w-full max-w-lg px-4 pb-8 pt-2">
-          {/* Header */}
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
-              Add a vehicle
-            </h2>
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Close"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-5 py-5">
           <AddVehicleForm onSuccess={() => setOpen(false)} />
         </div>
       </div>
