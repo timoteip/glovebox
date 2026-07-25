@@ -2,26 +2,25 @@
 
 A running record of the reasoning behind non-obvious technical choices. Newest first.
 
-## Per-vehicle distance input: odometer or trip
+## Distance input per fill: odometer or trip
 
-Some drivers read the odometer at each fill; others reset the trip meter every
-fill and record distance-since-last-fill instead. A vehicle's `distance_input`
-setting (`'odometer'` | `'trip'`) picks which the entry form asks for.
+Some fills you know the odometer for; others you only know the trip (distance
+since the last fill, e.g. a dashboard trip meter reset each fill). The entry
+form lets you pick **per fill** — a small Odometer/Trip toggle — so the two can
+be mixed freely on one vehicle. (An earlier iteration made this a per-vehicle
+setting; per-fill turned out simpler and more flexible, so the vehicle-level
+`distance_input` column is no longer used.)
 
-The engine stays odometer-based either way. For a trip vehicle,
-`toFuelFills` reconstructs an absolute odometer per fill: it walks the fills in
-date order carrying a running total — a real odometer reading re-syncs it, a
-trip leg advances it — so trip and odometer fills feed one and the same
-full-to-full chain. This is why we kept an odometer anchor rather than tracking
-pure trips:
+The engine stays odometer-based regardless. `toFuelFills` reconstructs an
+absolute odometer for every fill: it walks the fills in date order carrying a
+running total — a real odometer reading re-syncs it, a trip leg advances it — so
+odometer and trip fills feed one and the same full-to-full chain. Consequences:
 
 - **Lifetime mileage keeps working.** Trip fills carry no raw odometer, so the
   vehicle page maxes over the synthesized odometers to keep the mileage stat
   advancing.
-- **History coexists.** A vehicle switched to trip mode keeps its old odometer
-  fills as anchors; new trip legs simply accumulate on top. Editing an old
-  odometer entry on a trip vehicle preserves its reading (hidden field) so the
-  anchor is never lost.
+- **History coexists.** Old odometer fills act as anchors; later trip legs
+  accumulate on top of them.
 - **The maths didn't fork.** Intervals, partials, missed-fill re-anchoring and
   outlier flagging are all unchanged — trip support lives entirely in how the
   odometer is derived, not in the economy calculation.

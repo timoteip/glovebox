@@ -29,7 +29,7 @@ export default async function EditEntryPage({
 
   const { data: vehicle } = await supabase
     .from("vehicles")
-    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit, distance_input")
+    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit")
     .eq("id", id)
     .single();
 
@@ -66,7 +66,6 @@ export default async function EditEntryPage({
             distance: vehicle.distance_unit,
             volume: vehicle.volume_unit,
             economy: vehicle.economy_unit,
-            input: vehicle.distance_input,
           }}
           defaultValues={{
             type: entry.type,

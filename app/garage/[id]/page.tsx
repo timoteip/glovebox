@@ -233,7 +233,7 @@ export default async function VehiclePage({
 
       <EntrySheet
         vehicleId={id}
-        units={{ distance: v.distance_unit, volume: v.volume_unit, economy: v.economy_unit, input: v.distance_input }}
+        units={{ distance: v.distance_unit, volume: v.volume_unit, economy: v.economy_unit }}
         fuelContext={fuelContext}
       />
     </main>

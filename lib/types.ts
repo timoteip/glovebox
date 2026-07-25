@@ -1,6 +1,6 @@
 // Shared DB row types. Mirrors schema.sql.
 
-import type { DistanceUnit, VolumeUnit, EconomyUnit, DistanceInput } from "./fuel/units";
+import type { DistanceUnit, VolumeUnit, EconomyUnit } from "./fuel/units";
 
 export type EntryType = "service" | "part" | "fuel" | "mileage" | "note";
 
@@ -16,7 +16,6 @@ export interface Vehicle {
   distance_unit: DistanceUnit;
   volume_unit: VolumeUnit;
   economy_unit: EconomyUnit;
-  distance_input: DistanceInput; // 'odometer' (per-fill reading) or 'trip' (miles since last fill)
   created_at: string;
 }
 

@@ -33,7 +33,6 @@ export interface FormUnits {
   distance: DistanceUnit;
   volume: VolumeUnit;
   economy: EconomyUnit;
-  input: DistanceInput; // odometer vs trip — decides which distance field the form shows
 }
 
 // Chain state at the point this fill is being added, in canonical units, so the
@@ -73,15 +72,20 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
   const [tripVal, setTripVal] = useState(defaultValues?.trip_miles?.toString() ?? "");
   const [gallonsVal, setGallonsVal] = useState(defaultValues?.gallons?.toString() ?? "");
   const [isFull, setIsFull] = useState(defaultValues?.is_full_tank ?? true);
+  // Distance for this fill: an absolute odometer or a trip since the last fill,
+  // chosen per fill. Editing defaults to whichever the entry already stored.
+  const [distanceMode, setDistanceMode] = useState<DistanceInput>(
+    defaultValues?.odometer != null ? "odometer" : defaultValues?.trip_miles != null ? "trip" : "odometer",
+  );
 
   const showTitle       = type !== "mileage" && type !== "fuel";
   const showDescription = type === "service" || type === "part" || type === "note";
   const showCost        = type === "service" || type === "part" || type === "fuel";
   const showFuel        = type === "fuel";
-  // A trip vehicle logs distance-since-last-fill instead of an odometer, so for
-  // fuel entries the trip field takes the odometer's place as the primary input.
-  const fuelTripMode    = showFuel && units.input === "trip";
-  const showOdometer    = type !== "note" && !fuelTripMode;
+  const fuelTripMode    = distanceMode === "trip";
+  // Fuel keeps its distance field (odometer or trip) inside the fuel section;
+  // every other type puts the odometer in the header row.
+  const showOdometer    = type !== "note" && type !== "fuel";
 
   const distUnit = distanceLabel[units.distance];
   const volumeName = units.volume === "l" ? "Litres" : "Gallons";
@@ -125,6 +129,7 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
         setType("fuel");
         setOdometerVal("");
         setTripVal("");
+        setDistanceMode("odometer");
         setGallonsVal("");
         setIsFull(true);
         onSuccess?.();
@@ -153,8 +158,8 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
       </div>
       <input type="hidden" name="type" value={type} />
 
-      {/* Date + distance (odometer, or trip for a trip vehicle) — side by side */}
-      <div className={showOdometer || fuelTripMode ? "grid grid-cols-2 gap-3" : ""}>
+      {/* Date + odometer (for non-fuel types) — side by side */}
+      <div className={showOdometer ? "grid grid-cols-2 gap-3" : ""}>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="date" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Date <span className="text-red-500">*</span>
@@ -171,7 +176,7 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
         {showOdometer && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="odometer" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Odometer ({distUnit}){showFuel && <span className="text-red-500"> *</span>}
+              Odometer ({distUnit})
             </label>
             <input
               id="odometer"
@@ -185,31 +190,7 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
             />
           </div>
         )}
-        {fuelTripMode && (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="trip_miles" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Trip ({distUnit}) <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="trip_miles"
-              name="trip_miles"
-              type="number"
-              min={0}
-              step="0.1"
-              placeholder="300"
-              value={tripVal}
-              onChange={(e) => setTripVal(e.target.value)}
-              className={INPUT}
-            />
-          </div>
-        )}
       </div>
-
-      {/* Preserve an existing odometer reading when editing on a trip vehicle,
-          so switching a vehicle to trip mode never wipes historical readings. */}
-      {fuelTripMode && defaultValues?.odometer != null && (
-        <input type="hidden" name="odometer" value={defaultValues.odometer} />
-      )}
 
       {/* Title */}
       {showTitle && (
@@ -269,6 +250,61 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
               ))}
             </div>
             <input type="hidden" name="is_full_tank" value={isFull ? "on" : ""} />
+          </div>
+
+          {/* Distance — odometer or trip, chosen per fill */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Distance</span>
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+              {[
+                { mode: "odometer" as const, label: "Odometer" },
+                { mode: "trip" as const, label: "Trip" },
+              ].map((opt) => (
+                <button
+                  key={opt.mode}
+                  type="button"
+                  onClick={() => setDistanceMode(opt.mode)}
+                  className={`h-9 rounded-md text-sm font-medium transition-colors ${
+                    distanceMode === opt.mode
+                      ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50"
+                      : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {distanceMode === "odometer" ? (
+              <input
+                id="odometer"
+                name="odometer"
+                type="number"
+                min={0}
+                placeholder="45 000"
+                aria-label={`Odometer (${distUnit})`}
+                value={odometerVal}
+                onChange={(e) => setOdometerVal(e.target.value)}
+                className={INPUT}
+              />
+            ) : (
+              <input
+                id="trip_miles"
+                name="trip_miles"
+                type="number"
+                min={0}
+                step="0.1"
+                placeholder="300"
+                aria-label={`Trip (${distUnit})`}
+                value={tripVal}
+                onChange={(e) => setTripVal(e.target.value)}
+                className={INPUT}
+              />
+            )}
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {distanceMode === "odometer"
+                ? `Total odometer reading (${distUnit}) at this fill.`
+                : `Distance since your last fill (${distUnit}).`}
+            </p>
           </div>
 
           {/* Volume */}
@@ -331,26 +367,6 @@ export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubm
               <option value="Diesel">Diesel</option>
             </select>
           </label>
-
-          {/* Trip reading — optional cross-check (odometer vehicles only; on a
-              trip vehicle the trip field is the primary input shown up top) */}
-          {!fuelTripMode && (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="trip_miles" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Trip ({distUnit}) <span className="font-normal text-zinc-400 dark:text-zinc-500">optional</span>
-              </label>
-              <input
-                id="trip_miles"
-                name="trip_miles"
-                type="number"
-                min={0}
-                step="0.1"
-                placeholder="125.4"
-                defaultValue={defaultValues?.trip_miles ?? ""}
-                className={INPUT}
-              />
-            </div>
-          )}
 
           {/* Missed a previous fill */}
           <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-zinc-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">

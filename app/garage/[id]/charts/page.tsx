@@ -7,7 +7,7 @@ import type { Entry, Vehicle } from "@/lib/types";
 import { MpgChart, MonthlyCostChart, CostByTypeChart } from "./charts-view";
 import type { MpgPoint, CostPoint, CostByType } from "./charts-view";
 
-type VehicleUnits = Pick<Vehicle, "distance_unit" | "volume_unit" | "economy_unit" | "distance_input">;
+type VehicleUnits = Pick<Vehicle, "distance_unit" | "volume_unit" | "economy_unit">;
 
 // The economy trend is the sequence of full-to-full intervals from the engine.
 // Imported readings (stored mpg, no odometer) are appended as a separate series
@@ -90,7 +90,7 @@ export default async function ChartsPage({
 
   const { data: vehicle } = await supabase
     .from("vehicles")
-    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit, distance_input")
+    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit")
     .eq("id", id)
     .single();
 

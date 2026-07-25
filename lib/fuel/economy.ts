@@ -62,40 +62,34 @@ const OUTLIER_DEVIATION = 0.4;
 // distance unit, volume in its volume unit; both become km and litres here so
 // nothing downstream has to care about units.
 //
-// For a "trip" vehicle the driver logs distance-since-last-fill instead of an
-// absolute odometer, so we reconstruct one: walk the fills in date order,
-// carrying a running odometer that a real reading re-syncs and a trip leg
-// advances. The result is an absolute odometer per fill, exactly what the rest
-// of the engine expects — trip and odometer vehicles share one code path from
-// here on. Historic odometer readings and new trip legs coexist in one chain.
+// Each fuel entry records distance either as an absolute odometer or as a trip
+// (distance since the last fill), chosen per fill. We reconstruct an absolute
+// odometer for every fill either way: walk them in date order carrying a running
+// total that a real odometer reading re-syncs and a trip leg advances. The rest
+// of the engine only ever sees absolute odometers, so odometer and trip fills —
+// even mixed within one vehicle — feed the same full-to-full chain.
 export function toFuelFills(
   entries: Entry[],
-  vehicle: Pick<Vehicle, "distance_unit" | "volume_unit" | "distance_input">,
+  vehicle: Pick<Vehicle, "distance_unit" | "volume_unit">,
 ): FuelFill[] {
   const fuel = entries.filter((e) => e.type === "fuel");
-  const litresOf = (e: Entry) =>
-    e.gallons != null ? toLitres(e.gallons, vehicle.volume_unit) : null;
-
-  const odometerKmOf =
-    vehicle.distance_input === "trip"
-      ? synthesizeTripOdometers(fuel, vehicle.distance_unit)
-      : (e: Entry) => (e.odometer != null ? toKm(e.odometer, vehicle.distance_unit) : null);
+  const odometerKmOf = synthesizeOdometers(fuel, vehicle.distance_unit);
 
   return fuel.map((e) => ({
     id: e.id,
     date: e.date,
     odometerKm: odometerKmOf(e),
-    litres: litresOf(e),
+    litres: e.gallons != null ? toLitres(e.gallons, vehicle.volume_unit) : null,
     isFull: e.is_full_tank === true,
     missedFill: e.missed_fill === true,
   }));
 }
 
-// Build a per-fill absolute odometer (km) from trip legs. Returns a lookup so
-// the caller can keep the original entry order. A fill with a real odometer
-// re-syncs the running total; one with only a trip advances it; one with
-// neither (e.g. a legacy mpg import) stays unplaced.
-function synthesizeTripOdometers(
+// Build a per-fill absolute odometer (km). Returns a lookup so the caller can
+// keep the original entry order. A fill with a real odometer re-syncs the
+// running total; one with only a trip advances it; one with neither (e.g. a
+// legacy mpg import) stays unplaced.
+function synthesizeOdometers(
   fuel: Entry[],
   distanceUnit: Vehicle["distance_unit"],
 ): (e: Entry) => number | null {

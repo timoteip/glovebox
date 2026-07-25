@@ -30,10 +30,7 @@ const US_VEHICLE = {
   distance_unit: "mi",
   volume_unit: "gal_us",
   economy_unit: "mpg_us",
-  distance_input: "odometer",
 } as const;
-
-const US_TRIP_VEHICLE = { ...US_VEHICLE, distance_input: "trip" } as const;
 
 function fuelEntry(partial: Partial<Entry>): Entry {
   return {
@@ -184,9 +181,9 @@ describe("legacy rows", () => {
 
 // ---------- trip-based distance input ----------
 
-describe("trip-based vehicles", () => {
+describe("trip-based fills", () => {
   it("reconstruct an odometer from trip legs and compute the same economy", () => {
-    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    const vehicle = { ...US_VEHICLE } as Vehicle;
     // No odometers — just distance-since-last-fill per tank.
     const entries: Entry[] = [
       fuelEntry({ date: "2026-01-01", trip_miles: 300, gallons: 10 }), // first full = anchor
@@ -202,7 +199,7 @@ describe("trip-based vehicles", () => {
   });
 
   it("roll a partial trip leg forward into the next full tank", () => {
-    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    const vehicle = { ...US_VEHICLE } as Vehicle;
     const entries: Entry[] = [
       fuelEntry({ date: "2026-01-01", trip_miles: 200, gallons: 10 }), // anchor
       fuelEntry({ date: "2026-01-05", trip_miles: 150, gallons: 5, is_full_tank: false }), // partial
@@ -214,7 +211,7 @@ describe("trip-based vehicles", () => {
   });
 
   it("anchor trip legs onto an earlier real odometer reading", () => {
-    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    const vehicle = { ...US_VEHICLE } as Vehicle;
     // A historic odometer fill, then the driver switches to logging trips.
     const entries: Entry[] = [
       fuelEntry({ date: "2026-01-01", odometer: 1000, gallons: 10 }), // real reading = anchor
@@ -229,7 +226,7 @@ describe("trip-based vehicles", () => {
   });
 
   it("break the chain on a missed fill just like odometer vehicles", () => {
-    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    const vehicle = { ...US_VEHICLE } as Vehicle;
     const entries: Entry[] = [
       fuelEntry({ date: "2026-01-01", trip_miles: 300, gallons: 10 }), // anchor
       fuelEntry({ date: "2026-01-08", trip_miles: 300, gallons: 10 }), // 30 mpg
