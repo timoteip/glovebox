@@ -7,7 +7,7 @@ import type { Entry, Vehicle } from "@/lib/types";
 import { MpgChart, MonthlyCostChart, CostByTypeChart } from "./charts-view";
 import type { MpgPoint, CostPoint, CostByType } from "./charts-view";
 
-type VehicleUnits = Pick<Vehicle, "distance_unit" | "volume_unit" | "economy_unit">;
+type VehicleUnits = Pick<Vehicle, "distance_unit" | "volume_unit" | "economy_unit" | "distance_input">;
 
 // The economy trend is the sequence of full-to-full intervals from the engine.
 // Imported readings (stored mpg, no odometer) are appended as a separate series
@@ -18,10 +18,7 @@ function buildEconomyData(entries: Entry[], units: VehicleUnits): MpgPoint[] {
 
   const unit = units.economy_unit;
 
-  // distance_input is threaded through properly in a later slice; the trend
-  // treats vehicles as odometer-based here, which is correct for every existing
-  // vehicle and harmless until trip mode is wired into this page.
-  const fills = toFuelFills(entries, { ...units, distance_input: "odometer" });
+  const fills = toFuelFills(entries, units);
   const derived: (MpgPoint & { date: string })[] = computeStats(fills, unit)
     .intervals.filter((iv) => iv.valid && iv.economy != null)
     .map((iv) => ({ label: fmtLabel(iv.date), mpg: iv.economy!, date: iv.date }));
@@ -93,7 +90,7 @@ export default async function ChartsPage({
 
   const { data: vehicle } = await supabase
     .from("vehicles")
-    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit")
+    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit, distance_input")
     .eq("id", id)
     .single();
 
