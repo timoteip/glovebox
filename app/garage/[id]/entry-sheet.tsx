@@ -1,9 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { EntryForm } from "./entry-form";
+import { EntryForm, type FormUnits, type FuelContext } from "./entry-form";
 
-export function EntrySheet({ vehicleId }: { vehicleId: string }) {
+export function EntrySheet({
+  vehicleId,
+  units,
+  fuelContext,
+}: {
+  vehicleId: string;
+  units: FormUnits;
+  fuelContext: FuelContext;
+}) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -73,7 +81,12 @@ export function EntrySheet({ vehicleId }: { vehicleId: string }) {
 
         {/* Scrollable form */}
         <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-5 py-5">
-          <EntryForm vehicleId={vehicleId} onSuccess={() => setOpen(false)} />
+          <EntryForm
+            vehicleId={vehicleId}
+            units={units}
+            fuelContext={fuelContext}
+            onSuccess={() => setOpen(false)}
+          />
         </div>
       </div>
     </>

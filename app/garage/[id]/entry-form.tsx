@@ -1,8 +1,19 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { addEntry } from "./actions";
 import type { Entry, EntryType } from "@/lib/types";
+import {
+  type DistanceUnit,
+  type EconomyUnit,
+  type VolumeUnit,
+  distanceLabel,
+  economyFromCanonical,
+  economyLabel,
+  fromKm,
+  toKm,
+  toLitres,
+} from "@/lib/fuel/units";
 
 const TYPES: { value: EntryType; label: string }[] = [
   { value: "fuel",    label: "Fuel" },
@@ -17,13 +28,28 @@ const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+export interface FormUnits {
+  distance: DistanceUnit;
+  volume: VolumeUnit;
+  economy: EconomyUnit;
+}
+
+// Chain state at the point this fill is being added, in canonical units, so the
+// form can preview the economy a full tank would record. Omitted while editing.
+export interface FuelContext {
+  lastFullOdometerKm: number | null;
+  litresSinceLastFull: number;
+}
+
 export type EntryFormDefaults = Pick<
   Entry,
-  "type" | "date" | "odometer" | "title" | "description" | "cost" | "gallons" | "trip_miles" | "mpg" | "is_full_tank" | "fuel_grade"
+  "type" | "date" | "odometer" | "title" | "description" | "cost" | "gallons" | "trip_miles" | "is_full_tank" | "missed_fill" | "fuel_grade"
 >;
 
 interface Props {
   vehicleId: string;
+  units: FormUnits;
+  fuelContext?: FuelContext;
   defaultValues?: EntryFormDefaults;
   onSubmit?: (formData: FormData) => Promise<void>;
   onSuccess?: () => void;
@@ -35,21 +61,14 @@ const INPUT =
 
 const LABEL = "flex flex-col gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300";
 
-export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submitLabel = "Add entry" }: Props) {
+export function EntryForm({ vehicleId, units, fuelContext, defaultValues, onSubmit, onSuccess, submitLabel = "Add entry" }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [type, setType] = useState<EntryType>(defaultValues?.type ?? "fuel");
   const [pending, startTransition] = useTransition();
 
-  // Fuel field state — kept in sync so any two fields calculate the third
+  const [odometerVal, setOdometerVal] = useState(defaultValues?.odometer?.toString() ?? "");
   const [gallonsVal, setGallonsVal] = useState(defaultValues?.gallons?.toString() ?? "");
-  const [tripMilesVal, setTripMilesVal] = useState(defaultValues?.trip_miles?.toString() ?? "");
-  const [mpgVal, setMpgVal] = useState(() => {
-    const g = defaultValues?.gallons;
-    const t = defaultValues?.trip_miles;
-    if (g && t && g > 0 && t > 0) return (t / g).toFixed(1);
-    if (defaultValues?.mpg) return defaultValues.mpg.toFixed(1);
-    return "";
-  });
+  const [isFull, setIsFull] = useState(defaultValues?.is_full_tank ?? true);
 
   const showTitle       = type !== "mileage" && type !== "fuel";
   const showDescription = type === "service" || type === "part" || type === "note";
@@ -57,28 +76,28 @@ export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submi
   const showOdometer    = type !== "note";
   const showFuel        = type === "fuel";
 
-  function handleGallonsChange(val: string) {
-    setGallonsVal(val);
-    const g = parseFloat(val);
-    const t = parseFloat(tripMilesVal);
-    if (g > 0 && t > 0) setMpgVal((t / g).toFixed(1));
-    else if (!val) setMpgVal("");
-  }
+  const distUnit = distanceLabel[units.distance];
+  const volumeName = units.volume === "l" ? "Litres" : "Gallons";
 
-  function handleTripMilesChange(val: string) {
-    setTripMilesVal(val);
-    const g = parseFloat(gallonsVal);
-    const t = parseFloat(val);
-    if (g > 0 && t > 0) setMpgVal((t / g).toFixed(1));
-    else if (!val) setMpgVal("");
-  }
+  // What a full tank at the current odometer/volume would record, measured from
+  // the last full tank. Null unless there's enough to compute a real figure.
+  const preview = useMemo(() => {
+    if (!showFuel || !isFull || !fuelContext || fuelContext.lastFullOdometerKm == null) return null;
+    const odo = parseFloat(odometerVal);
+    const gal = parseFloat(gallonsVal);
+    if (!(odo > 0) || !(gal > 0)) return null;
 
-  function handleMpgChange(val: string) {
-    setMpgVal(val);
-    const g = parseFloat(gallonsVal);
-    const m = parseFloat(val);
-    if (g > 0 && m > 0) setTripMilesVal((m * g).toFixed(1));
-  }
+    const distanceKm = toKm(odo, units.distance) - fuelContext.lastFullOdometerKm;
+    if (distanceKm <= 0) return null;
+
+    const litres = toLitres(gal, units.volume) + fuelContext.litresSinceLastFull;
+    const economy = economyFromCanonical(distanceKm, litres, units.economy);
+    if (economy == null) return null;
+
+    return { distance: fromKm(distanceKm, units.distance), economy };
+  }, [showFuel, isFull, fuelContext, odometerVal, gallonsVal, units]);
+
+  const missingOdometer = showFuel && isFull && !(parseFloat(odometerVal) > 0);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -88,9 +107,9 @@ export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submi
         await addEntry(vehicleId, formData);
         formRef.current?.reset();
         setType("fuel");
+        setOdometerVal("");
         setGallonsVal("");
-        setTripMilesVal("");
-        setMpgVal("");
+        setIsFull(true);
         onSuccess?.();
       }
     });
@@ -135,7 +154,7 @@ export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submi
         {showOdometer && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor="odometer" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Odometer (mi)
+              Odometer ({distUnit}){showFuel && <span className="text-red-500"> *</span>}
             </label>
             <input
               id="odometer"
@@ -143,7 +162,8 @@ export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submi
               type="number"
               min={0}
               placeholder="45 000"
-              defaultValue={defaultValues?.odometer ?? ""}
+              value={odometerVal}
+              onChange={(e) => setOdometerVal(e.target.value)}
               className={INPUT}
             />
           </div>
@@ -185,56 +205,70 @@ export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submi
       {/* Fuel-specific fields */}
       {showFuel && (
         <>
-          {/* Gallons + Trip miles side by side */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="gallons" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Gallons</label>
-              <input
-                id="gallons"
-                name="gallons"
-                type="number"
-                min={0}
-                step="0.001"
-                placeholder="12.345"
-                value={gallonsVal}
-                onChange={(e) => handleGallonsChange(e.target.value)}
-                className={INPUT}
-              />
+          {/* Full vs partial */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Fill type</span>
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+              {[
+                { full: true, label: "Full tank" },
+                { full: false, label: "Partial" },
+              ].map((opt) => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setIsFull(opt.full)}
+                  className={`h-9 rounded-md text-sm font-medium transition-colors ${
+                    isFull === opt.full
+                      ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-950 dark:text-zinc-50"
+                      : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="trip_miles" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Trip miles</label>
-              <input
-                id="trip_miles"
-                name="trip_miles"
-                type="number"
-                min={0}
-                step="0.1"
-                placeholder="125.4"
-                value={tripMilesVal}
-                onChange={(e) => handleTripMilesChange(e.target.value)}
-                className={INPUT}
-              />
-            </div>
+            <input type="hidden" name="is_full_tank" value={isFull ? "on" : ""} />
           </div>
 
-          {/* MPG — live calculated, also editable */}
+          {/* Volume */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="mpg_display" className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              MPG
-              <span className="text-xs font-normal text-zinc-400 dark:text-zinc-500">auto-calculated · editable</span>
-            </label>
+            <label htmlFor="gallons" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{volumeName}</label>
             <input
-              id="mpg_display"
-              name="mpg"
+              id="gallons"
+              name="gallons"
               type="number"
               min={0}
-              step="0.1"
-              placeholder="—"
-              value={mpgVal}
-              onChange={(e) => handleMpgChange(e.target.value)}
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-900 focus:bg-white dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-50 dark:focus:border-zinc-400 dark:focus:bg-zinc-900"
+              step="0.001"
+              placeholder="12.345"
+              value={gallonsVal}
+              onChange={(e) => setGallonsVal(e.target.value)}
+              className={INPUT}
             />
           </div>
+
+          {/* Live economy preview */}
+          {preview && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/30">
+              <span className="text-emerald-700 dark:text-emerald-400">Since last full tank: </span>
+              <span className="font-semibold text-emerald-900 dark:text-emerald-200">
+                {preview.distance.toFixed(0)} {distUnit}
+              </span>
+              <span className="text-emerald-700 dark:text-emerald-400"> · </span>
+              <span className="font-semibold text-emerald-900 dark:text-emerald-200">
+                {preview.economy.toFixed(1)} {economyLabel[units.economy]}
+              </span>
+            </div>
+          )}
+          {!isFull && (
+            <p className="-mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Partial fill — this fuel rolls into your next full tank.
+            </p>
+          )}
+          {missingOdometer && (
+            <p className="-mt-1 text-xs text-amber-600 dark:text-amber-500">
+              Add an odometer reading so this fill counts toward economy.
+            </p>
+          )}
 
           {/* Grade */}
           <label className={LABEL}>
@@ -252,16 +286,37 @@ export function EntryForm({ vehicleId, defaultValues, onSubmit, onSuccess, submi
             </select>
           </label>
 
-          {/* Full tank toggle */}
-          <label className="flex cursor-pointer items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-3 transition-colors dark:border-zinc-700 dark:bg-zinc-900">
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Full tank</span>
+          {/* Trip reading — optional cross-check */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="trip_miles" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Trip ({distUnit}) <span className="font-normal text-zinc-400 dark:text-zinc-500">optional</span>
+            </label>
             <input
-              name="is_full_tank"
-              type="checkbox"
-              defaultChecked={defaultValues?.is_full_tank ?? true}
-              className="peer sr-only"
+              id="trip_miles"
+              name="trip_miles"
+              type="number"
+              min={0}
+              step="0.1"
+              placeholder="125.4"
+              defaultValue={defaultValues?.trip_miles ?? ""}
+              className={INPUT}
             />
-            <span className="relative inline-flex h-5 w-9 flex-shrink-0 rounded-full bg-zinc-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:content-[''] peer-checked:bg-zinc-900 peer-checked:after:translate-x-4 dark:bg-zinc-700 dark:peer-checked:bg-zinc-100 dark:after:bg-zinc-400 dark:peer-checked:after:bg-zinc-900" />
+          </div>
+
+          {/* Missed a previous fill */}
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-zinc-200 bg-white px-3 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+            <input
+              name="missed_fill"
+              type="checkbox"
+              defaultChecked={defaultValues?.missed_fill ?? false}
+              className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-zinc-900 dark:accent-zinc-100"
+            />
+            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+              I missed logging a fill-up before this one
+              <span className="mt-0.5 block text-xs text-zinc-400 dark:text-zinc-500">
+                Restarts the economy calculation here so a gap doesn’t skew it.
+              </span>
+            </span>
           </label>
         </>
       )}

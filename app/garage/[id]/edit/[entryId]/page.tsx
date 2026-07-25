@@ -29,7 +29,7 @@ export default async function EditEntryPage({
 
   const { data: vehicle } = await supabase
     .from("vehicles")
-    .select("year, make, model, nickname")
+    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit")
     .eq("id", id)
     .single();
 
@@ -62,6 +62,11 @@ export default async function EditEntryPage({
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <EntryForm
           vehicleId={id}
+          units={{
+            distance: vehicle.distance_unit,
+            volume: vehicle.volume_unit,
+            economy: vehicle.economy_unit,
+          }}
           defaultValues={{
             type: entry.type,
             date: entry.date,
@@ -71,8 +76,8 @@ export default async function EditEntryPage({
             cost: entry.cost,
             gallons: entry.gallons,
             trip_miles: entry.trip_miles,
-            mpg: entry.mpg,
             is_full_tank: entry.is_full_tank,
+            missed_fill: entry.missed_fill,
             fuel_grade: entry.fuel_grade,
           }}
           onSubmit={handleUpdate}
