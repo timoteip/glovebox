@@ -1,5 +1,6 @@
 // Shared DB row types. Mirrors schema.sql.
 
+import type { DistanceUnit, VolumeUnit, EconomyUnit } from "./fuel/units";
 
 export type EntryType = "service" | "part" | "fuel" | "mileage" | "note";
 
@@ -12,6 +13,9 @@ export interface Vehicle {
   nickname: string | null;
   vin: string | null;
   photo_url: string | null;
+  distance_unit: DistanceUnit;
+  volume_unit: VolumeUnit;
+  economy_unit: EconomyUnit;
   created_at: string;
 }
 
@@ -40,8 +44,9 @@ export interface Entry {
   cost: number | null;
   gallons: number | null; // fuel only
   trip_miles: number | null; // fuel only — trip odometer reading reset at each fill-up
-  mpg: number | null; // fuel only — stored directly when raw data isn't available
+  mpg: number | null; // fuel only — legacy imports; derived economy is never stored here
   is_full_tank: boolean | null; // fuel only
+  missed_fill: boolean; // fuel only — true breaks the full-to-full chain at this fill
   fuel_grade: string | null; // fuel only
   created_at: string;
 }

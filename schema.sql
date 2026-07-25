@@ -7,14 +7,18 @@
 
 -- ---------- VEHICLES ----------
 create table public.vehicles (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users (id) on delete cascade,
-  year        int,
-  make        text not null,
-  model       text not null,
-  nickname    text,
-  vin         text,
-  created_at  timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users (id) on delete cascade,
+  year          int,
+  make          text not null,
+  model         text not null,
+  nickname      text,
+  vin           text,
+  photo_url     text,
+  distance_unit text not null default 'mi'     check (distance_unit in ('mi','km')),
+  volume_unit   text not null default 'gal_us' check (volume_unit in ('gal_us','gal_uk','l')),
+  economy_unit  text not null default 'mpg_us' check (economy_unit in ('mpg_us','mpg_uk','l_100km','km_l')),
+  created_at    timestamptz not null default now()
 );
 
 -- ---------- ENTRIES ----------
@@ -28,7 +32,10 @@ create table public.entries (
   description  text,
   cost         numeric(10,2),     -- nullable
   gallons      numeric(6,3),      -- nullable, fuel only
+  trip_miles   numeric(7,1),      -- nullable, fuel only — optional trip-odometer cross-check
+  mpg          numeric(6,2),      -- nullable, fuel only — legacy imports only
   is_full_tank boolean,           -- nullable, fuel only
+  missed_fill  boolean not null default false, -- fuel only — breaks the full-to-full chain
   fuel_grade   text,              -- nullable, fuel only
   created_at   timestamptz not null default now()
 );
@@ -160,3 +167,11 @@ create policy "prefs_update_own" on public.user_preferences
 -- ---------- MIGRATIONS (run after initial setup) ----------
 -- alter table public.entries add column fuel_grade text;
 -- (run the create table blocks for reminders and user_preferences as migrations)
+
+-- Fuel-economy redesign: full-to-full tracking + per-vehicle units.
+-- (trip_miles, mpg and photo_url are already present on existing databases and
+--  are listed in the create blocks above only so a fresh setup matches.)
+-- alter table public.entries  add column missed_fill   boolean not null default false;
+-- alter table public.vehicles add column distance_unit text not null default 'mi'     check (distance_unit in ('mi','km'));
+-- alter table public.vehicles add column volume_unit   text not null default 'gal_us' check (volume_unit in ('gal_us','gal_uk','l'));
+-- alter table public.vehicles add column economy_unit  text not null default 'mpg_us' check (economy_unit in ('mpg_us','mpg_uk','l_100km','km_l'));
