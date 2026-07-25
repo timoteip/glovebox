@@ -24,6 +24,8 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
   const model = String(formData.get("model") ?? "").trim();
   const nickname = String(formData.get("nickname") ?? "").trim() || null;
   const vin = String(formData.get("vin") ?? "").trim() || null;
+  const distance_input =
+    String(formData.get("distance_input") ?? "") === "trip" ? "trip" : "odometer";
 
   if (!make || !model) return;
 
@@ -46,7 +48,7 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
     photo_url = publicUrl;
   }
 
-  const updateData: Record<string, unknown> = { year, make, model, nickname, vin };
+  const updateData: Record<string, unknown> = { year, make, model, nickname, vin, distance_input };
   if (photo_url !== undefined) updateData.photo_url = photo_url;
 
   const { error } = await supabase

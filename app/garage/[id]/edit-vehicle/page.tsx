@@ -122,6 +122,34 @@ export default async function EditVehiclePage({
             />
           </label>
 
+          {/* How fuel fills record distance */}
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">Distance input</legend>
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800">
+              {[
+                { value: "odometer", label: "Odometer" },
+                { value: "trip", label: "Trip" },
+              ].map((opt) => (
+                <label key={opt.value} className="contents">
+                  <input
+                    type="radio"
+                    name="distance_input"
+                    value={opt.value}
+                    defaultChecked={(vehicle.distance_input ?? "odometer") === opt.value}
+                    className="peer sr-only"
+                  />
+                  <span className="flex h-9 cursor-pointer items-center justify-center rounded-md text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-700 peer-checked:bg-white peer-checked:text-zinc-900 peer-checked:shadow-sm dark:text-zinc-400 dark:hover:text-zinc-200 dark:peer-checked:bg-zinc-950 dark:peer-checked:text-zinc-50">
+                    {opt.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="font-medium text-zinc-600 dark:text-zinc-300">Odometer</span> — enter the total reading at each fill.{" "}
+              <span className="font-medium text-zinc-600 dark:text-zinc-300">Trip</span> — enter distance since your last fill; the odometer is kept for you.
+            </p>
+          </fieldset>
+
           <button
             type="submit"
             className="mt-1 h-12 rounded-lg bg-zinc-900 px-4 font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
