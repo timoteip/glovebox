@@ -73,6 +73,9 @@ function EntryRow({ entry, vehicleId }: { entry: Entry; vehicleId: string }) {
           {entry.is_full_tank === false && (
             <span className="text-zinc-400 dark:text-zinc-600">partial fill</span>
           )}
+          {entry.missed_fill && (
+            <span className="text-amber-600 dark:text-amber-500">missed fill before</span>
+          )}
         </div>
       </div>
 
