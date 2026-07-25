@@ -4,11 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { EntrySheet } from "./entry-sheet";
 import { RemindersSection } from "./reminders-section";
 import { TimelineSection } from "./timeline-section";
-import type { Entry } from "@/lib/types";
+import { computeFuelStats, flaggedIntervals, openTankState, toFuelFills } from "@/lib/fuel/economy";
+import { distanceLabel, economyLabel } from "@/lib/fuel/units";
+import type { Entry, Vehicle } from "@/lib/types";
 
 interface Stats {
   currentMileage: number | null;
-  avgMpg: number | null;
   totalSpent: number;
 }
 
@@ -19,37 +20,9 @@ function computeStats(entries: Entry[]): Stats {
   const currentMileage =
     odometerReadings.length > 0 ? Math.max(...odometerReadings) : null;
 
-  // Per-entry MPG: stored mpg > calculated from trip_miles/gallons > odometer fallback
-  const entryMpgs = entries
-    .filter((e) => e.type === "fuel")
-    .map((e): number | null => {
-      if (e.mpg != null && e.mpg > 0) return e.mpg;
-      if (e.trip_miles != null && e.trip_miles > 0 && e.gallons != null && e.gallons > 0) return e.trip_miles / e.gallons;
-      return null;
-    })
-    .filter((v): v is number => v !== null);
-
-  // Odometer-based fallback (for entries with neither mpg nor trip_miles)
-  const odometerMpgs: number[] = [];
-  if (entryMpgs.length === 0) {
-    const fullTankFuels = entries
-      .filter((e) => e.type === "fuel" && e.mpg == null && e.trip_miles == null && e.is_full_tank === true && e.odometer != null && e.gallons != null)
-      .sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0));
-    for (let i = 1; i < fullTankFuels.length; i++) {
-      const miles = (fullTankFuels[i].odometer ?? 0) - (fullTankFuels[i - 1].odometer ?? 0);
-      const gallons = fullTankFuels[i].gallons ?? 0;
-      if (gallons > 0 && miles > 0) odometerMpgs.push(miles / gallons);
-    }
-  }
-
-  const allMpgs = entryMpgs.length > 0 ? entryMpgs : odometerMpgs;
-  const avgMpg = allMpgs.length > 0
-    ? allMpgs.reduce((a, b) => a + b, 0) / allMpgs.length
-    : null;
-
   const totalSpent = entries.reduce((sum, e) => sum + (e.cost ?? 0), 0);
 
-  return { currentMileage, avgMpg, totalSpent };
+  return { currentMileage, totalSpent };
 }
 
 export default async function VehiclePage({
@@ -90,7 +63,17 @@ export default async function VehiclePage({
 
   const allEntries = (entries ?? []) as Entry[];
   const allReminders = reminders ?? [];
+  const v = vehicle as Vehicle;
   const stats = computeStats(allEntries);
+  const fuel = computeFuelStats(allEntries, v);
+  const fuelContext = openTankState(toFuelFills(allEntries, v));
+  const econLabel = economyLabel[v.economy_unit];
+  const distLabel = distanceLabel[v.distance_unit];
+  const fmtEcon = (n: number | null) => (n != null ? n.toFixed(1) : "—");
+  const flagged = flaggedIntervals(fuel);
+  const flaggedDates = flagged.map((iv) =>
+    new Date(iv.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  );
   const today = new Date().toISOString().slice(0, 10);
 
   const vehicleTitle = [vehicle.year, vehicle.make, vehicle.model]
@@ -165,14 +148,14 @@ export default async function VehiclePage({
             <span className="mt-1 text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50 leading-none">
               {stats.currentMileage != null ? stats.currentMileage.toLocaleString() : "—"}
             </span>
-            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">miles</span>
+            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">{distLabel}</span>
           </div>
           <div className="flex flex-col rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-            <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Avg MPG</span>
+            <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Economy</span>
             <span className="mt-1 text-xl font-bold tabular-nums text-zinc-900 dark:text-zinc-50 leading-none">
-              {stats.avgMpg != null ? stats.avgMpg.toFixed(1) : "—"}
+              {fmtEcon(fuel.lifetime)}
             </span>
-            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">mpg</span>
+            <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">{econLabel} lifetime</span>
           </div>
           <div className="flex flex-col rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
             <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">Spent</span>
@@ -182,6 +165,50 @@ export default async function VehiclePage({
             <span className="mt-1 text-xs text-zinc-400 dark:text-zinc-600">total</span>
           </div>
         </div>
+
+        {/* Fuel economy breakdown */}
+        {fuel.lifetime != null && (
+          <section className="mt-4">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+              Fuel economy <span className="font-normal normal-case tracking-normal">({econLabel})</span>
+            </h2>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Current", value: fuel.current },
+                { label: "Best", value: fuel.best },
+                { label: "Worst", value: fuel.worst },
+                { label: "Last 10", value: fuel.last10 },
+              ].map((cell) => (
+                <div
+                  key={cell.label}
+                  className="flex min-h-[68px] flex-col rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                  <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">{cell.label}</span>
+                  <span className="mt-1 text-lg font-bold tabular-nums leading-none text-zinc-900 dark:text-zinc-50">
+                    {fmtEcon(cell.value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Outlier warning — fill-ups the engine flagged and left out of the figures */}
+        {flagged.length > 0 && (
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-900/60 dark:bg-amber-950/40">
+            <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mt-0.5 flex-shrink-0 text-amber-500">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <p className="text-xs text-amber-800 dark:text-amber-200">
+              {flagged.length === 1
+                ? `The fill-up on ${flaggedDates[0]} looks off and isn’t counted in the figures above.`
+                : `${flagged.length} fill-ups (${flaggedDates.join(", ")}) look off and aren’t counted in the figures above.`}{" "}
+              Check the odometer and volume on {flagged.length === 1 ? "that entry" : "those entries"}.
+            </p>
+          </div>
+        )}
 
         {/* Reminders */}
         <RemindersSection
@@ -196,7 +223,11 @@ export default async function VehiclePage({
 
       </div>
 
-      <EntrySheet vehicleId={id} />
+      <EntrySheet
+        vehicleId={id}
+        units={{ distance: v.distance_unit, volume: v.volume_unit, economy: v.economy_unit }}
+        fuelContext={fuelContext}
+      />
     </main>
   );
 }
