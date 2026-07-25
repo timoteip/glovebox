@@ -9,6 +9,13 @@ export type DistanceUnit = "mi" | "km";
 export type VolumeUnit = "gal_us" | "gal_uk" | "l";
 export type EconomyUnit = "mpg_us" | "mpg_uk" | "l_100km" | "km_l";
 
+// How a vehicle's fills record distance. "odometer" stores an absolute reading
+// per fill (the source of truth). "trip" stores the distance driven since the
+// last fill; the engine reconstructs an absolute odometer from those legs,
+// anchored to the vehicle's most recent real reading, so the full-to-full maths
+// and lifetime mileage keep working either way.
+export type DistanceInput = "odometer" | "trip";
+
 // ---------- conversion factors ----------
 
 const KM_PER_MILE = 1.609344;
@@ -100,7 +107,13 @@ export const economyLabel: Record<EconomyUnit, string> = {
   km_l: "km/L",
 };
 
+export const distanceInputLabel: Record<DistanceInput, string> = {
+  odometer: "Odometer",
+  trip: "Trip",
+};
+
 // Sensible defaults for a new vehicle when the driver hasn't picked units yet.
 export const DEFAULT_DISTANCE_UNIT: DistanceUnit = "mi";
 export const DEFAULT_VOLUME_UNIT: VolumeUnit = "gal_us";
 export const DEFAULT_ECONOMY_UNIT: EconomyUnit = "mpg_us";
+export const DEFAULT_DISTANCE_INPUT: DistanceInput = "odometer";

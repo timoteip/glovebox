@@ -18,6 +18,7 @@ create table public.vehicles (
   distance_unit text not null default 'mi'     check (distance_unit in ('mi','km')),
   volume_unit   text not null default 'gal_us' check (volume_unit in ('gal_us','gal_uk','l')),
   economy_unit  text not null default 'mpg_us' check (economy_unit in ('mpg_us','mpg_uk','l_100km','km_l')),
+  distance_input text not null default 'odometer' check (distance_input in ('odometer','trip')),
   created_at    timestamptz not null default now()
 );
 
@@ -175,3 +176,7 @@ create policy "prefs_update_own" on public.user_preferences
 -- alter table public.vehicles add column distance_unit text not null default 'mi'     check (distance_unit in ('mi','km'));
 -- alter table public.vehicles add column volume_unit   text not null default 'gal_us' check (volume_unit in ('gal_us','gal_uk','l'));
 -- alter table public.vehicles add column economy_unit  text not null default 'mpg_us' check (economy_unit in ('mpg_us','mpg_uk','l_100km','km_l'));
+
+-- Per-vehicle distance input: 'odometer' (absolute reading per fill) or 'trip'
+-- (miles since last fill; engine reconstructs the odometer from trip legs).
+-- alter table public.vehicles add column distance_input text not null default 'odometer' check (distance_input in ('odometer','trip'));
