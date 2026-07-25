@@ -5,7 +5,7 @@ import { EntrySheet } from "./entry-sheet";
 import { RemindersSection } from "./reminders-section";
 import { TimelineSection } from "./timeline-section";
 import { computeFuelStats, flaggedIntervals, openTankState, toFuelFills } from "@/lib/fuel/economy";
-import { distanceLabel, economyLabel } from "@/lib/fuel/units";
+import { distanceLabel, economyLabel, fromKm } from "@/lib/fuel/units";
 import type { Entry, Vehicle } from "@/lib/types";
 
 interface Stats {
@@ -13,12 +13,15 @@ interface Stats {
   totalSpent: number;
 }
 
-function computeStats(entries: Entry[]): Stats {
-  const odometerReadings = entries
+// fuelMileages are the synthesized fuel odometers (in the vehicle's distance
+// unit) so a trip vehicle — whose fuel rows carry no raw odometer — still
+// reports a current mileage that advances with every fill.
+function computeStats(entries: Entry[], fuelMileages: number[]): Stats {
+  const rawReadings = entries
     .map((e) => e.odometer)
     .filter((o): o is number => o != null);
-  const currentMileage =
-    odometerReadings.length > 0 ? Math.max(...odometerReadings) : null;
+  const all = [...rawReadings, ...fuelMileages];
+  const currentMileage = all.length > 0 ? Math.round(Math.max(...all)) : null;
 
   const totalSpent = entries.reduce((sum, e) => sum + (e.cost ?? 0), 0);
 
@@ -64,9 +67,14 @@ export default async function VehiclePage({
   const allEntries = (entries ?? []) as Entry[];
   const allReminders = reminders ?? [];
   const v = vehicle as Vehicle;
-  const stats = computeStats(allEntries);
+  const fuelFills = toFuelFills(allEntries, v);
+  const fuelMileages = fuelFills
+    .map((f) => f.odometerKm)
+    .filter((k): k is number => k != null)
+    .map((km) => fromKm(km, v.distance_unit));
+  const stats = computeStats(allEntries, fuelMileages);
   const fuel = computeFuelStats(allEntries, v);
-  const fuelContext = openTankState(toFuelFills(allEntries, v));
+  const fuelContext = openTankState(fuelFills);
   const econLabel = economyLabel[v.economy_unit];
   const distLabel = distanceLabel[v.distance_unit];
   const fmtEcon = (n: number | null) => (n != null ? n.toFixed(1) : "—");
@@ -225,7 +233,7 @@ export default async function VehiclePage({
 
       <EntrySheet
         vehicleId={id}
-        units={{ distance: v.distance_unit, volume: v.volume_unit, economy: v.economy_unit }}
+        units={{ distance: v.distance_unit, volume: v.volume_unit, economy: v.economy_unit, input: v.distance_input }}
         fuelContext={fuelContext}
       />
     </main>
