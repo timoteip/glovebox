@@ -5,10 +5,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
-const adminStorage = createAdminClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+// Built lazily inside the action so importing this module during the build's
+// "collect page data" step doesn't require the env vars to be present.
+function getAdminStorage() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
 
 export async function updateVehicle(vehicleId: string, formData: FormData) {
   const supabase = await createClient();
@@ -33,9 +37,11 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
   const photoFile = formData.get("photo") as File | null;
 
   if (removePhoto) {
+    const adminStorage = getAdminStorage();
     await adminStorage.storage.from("vehicle-photos").remove([vehicleId]);
     photo_url = null;
   } else if (photoFile && photoFile.size > 0) {
+    const adminStorage = getAdminStorage();
     const { error: uploadError } = await adminStorage.storage
       .from("vehicle-photos")
       .upload(vehicleId, photoFile, { contentType: photoFile.type, upsert: true });
