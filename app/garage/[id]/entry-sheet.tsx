@@ -80,7 +80,7 @@ export function EntrySheet({
         </div>
 
         {/* Scrollable form */}
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-5 py-5">
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-5 [touch-action:pan-y]">
           <EntryForm
             vehicleId={vehicleId}
             units={units}
