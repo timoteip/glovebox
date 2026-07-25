@@ -18,7 +18,11 @@ function buildEconomyData(entries: Entry[], units: VehicleUnits): MpgPoint[] {
 
   const unit = units.economy_unit;
 
-  const derived: (MpgPoint & { date: string })[] = computeStats(toFuelFills(entries, units), unit)
+  // distance_input is threaded through properly in a later slice; the trend
+  // treats vehicles as odometer-based here, which is correct for every existing
+  // vehicle and harmless until trip mode is wired into this page.
+  const fills = toFuelFills(entries, { ...units, distance_input: "odometer" });
+  const derived: (MpgPoint & { date: string })[] = computeStats(fills, unit)
     .intervals.filter((iv) => iv.valid && iv.economy != null)
     .map((iv) => ({ label: fmtLabel(iv.date), mpg: iv.economy!, date: iv.date }));
 

@@ -61,20 +61,61 @@ const OUTLIER_DEVIATION = 0.4;
 // Reduce raw entries to canonical fills. Odometer is read in the vehicle's
 // distance unit, volume in its volume unit; both become km and litres here so
 // nothing downstream has to care about units.
+//
+// For a "trip" vehicle the driver logs distance-since-last-fill instead of an
+// absolute odometer, so we reconstruct one: walk the fills in date order,
+// carrying a running odometer that a real reading re-syncs and a trip leg
+// advances. The result is an absolute odometer per fill, exactly what the rest
+// of the engine expects — trip and odometer vehicles share one code path from
+// here on. Historic odometer readings and new trip legs coexist in one chain.
 export function toFuelFills(
   entries: Entry[],
-  vehicle: Pick<Vehicle, "distance_unit" | "volume_unit">,
+  vehicle: Pick<Vehicle, "distance_unit" | "volume_unit" | "distance_input">,
 ): FuelFill[] {
-  return entries
-    .filter((e) => e.type === "fuel")
-    .map((e) => ({
-      id: e.id,
-      date: e.date,
-      odometerKm: e.odometer != null ? toKm(e.odometer, vehicle.distance_unit) : null,
-      litres: e.gallons != null ? toLitres(e.gallons, vehicle.volume_unit) : null,
-      isFull: e.is_full_tank === true,
-      missedFill: e.missed_fill === true,
-    }));
+  const fuel = entries.filter((e) => e.type === "fuel");
+  const litresOf = (e: Entry) =>
+    e.gallons != null ? toLitres(e.gallons, vehicle.volume_unit) : null;
+
+  const odometerKmOf =
+    vehicle.distance_input === "trip"
+      ? synthesizeTripOdometers(fuel, vehicle.distance_unit)
+      : (e: Entry) => (e.odometer != null ? toKm(e.odometer, vehicle.distance_unit) : null);
+
+  return fuel.map((e) => ({
+    id: e.id,
+    date: e.date,
+    odometerKm: odometerKmOf(e),
+    litres: litresOf(e),
+    isFull: e.is_full_tank === true,
+    missedFill: e.missed_fill === true,
+  }));
+}
+
+// Build a per-fill absolute odometer (km) from trip legs. Returns a lookup so
+// the caller can keep the original entry order. A fill with a real odometer
+// re-syncs the running total; one with only a trip advances it; one with
+// neither (e.g. a legacy mpg import) stays unplaced.
+function synthesizeTripOdometers(
+  fuel: Entry[],
+  distanceUnit: Vehicle["distance_unit"],
+): (e: Entry) => number | null {
+  const chronological = [...fuel].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.created_at.localeCompare(b.created_at),
+  );
+  const byId = new Map<string, number | null>();
+  let running: number | null = null;
+  for (const e of chronological) {
+    if (e.odometer != null) {
+      running = toKm(e.odometer, distanceUnit);
+      byId.set(e.id, running);
+    } else if (e.trip_miles != null) {
+      running = (running ?? 0) + toKm(e.trip_miles, distanceUnit);
+      byId.set(e.id, running);
+    } else {
+      byId.set(e.id, null);
+    }
+  }
+  return (e: Entry) => byId.get(e.id) ?? null;
 }
 
 // The state left over once every fill has been walked: the odometer of the
@@ -83,6 +124,7 @@ export function toFuelFills(
 export interface OpenTank {
   lastFullOdometerKm: number | null;
   litresSinceLastFull: number;
+  kmSinceLastFull: number; // distance already covered since the anchor, for the trip preview
 }
 
 interface Chain {
@@ -102,8 +144,11 @@ function chain(fills: FuelFill[]): Chain {
   const raw: Omit<Interval, "economy" | "valid">[] = [];
   let anchor: FuelFill | null = null; // the full fill that opened the current interval
   let litresSince = 0; // fuel logged since the anchor, excluding the anchor's own fill
+  let lastOdometerKm: number | null = null; // odometer of the most recent fill overall
 
   for (const fill of ordered) {
+    lastOdometerKm = fill.odometerKm;
+
     if (fill.missedFill) {
       // The chain can't be trusted across a missed fill: re-anchor on it if it's
       // a full tank, otherwise wait for the next full tank to start fresh.
@@ -135,9 +180,18 @@ function chain(fills: FuelFill[]): Chain {
     }
   }
 
+  const kmSinceLastFull =
+    anchor != null && lastOdometerKm != null
+      ? Math.max(0, lastOdometerKm - anchor.odometerKm!)
+      : 0;
+
   return {
     raw,
-    open: { lastFullOdometerKm: anchor?.odometerKm ?? null, litresSinceLastFull: litresSince },
+    open: {
+      lastFullOdometerKm: anchor?.odometerKm ?? null,
+      litresSinceLastFull: litresSince,
+      kmSinceLastFull,
+    },
   };
 }
 

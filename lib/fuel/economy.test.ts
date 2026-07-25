@@ -11,6 +11,8 @@ import type { Entry, Vehicle } from "../types";
 
 // ---------- helpers ----------
 
+const toKmMi = (mi: number) => mi * 1.609344;
+
 let seq = 0;
 function fill(partial: Partial<FuelFill>): FuelFill {
   return {
@@ -28,7 +30,10 @@ const US_VEHICLE = {
   distance_unit: "mi",
   volume_unit: "gal_us",
   economy_unit: "mpg_us",
+  distance_input: "odometer",
 } as const;
+
+const US_TRIP_VEHICLE = { ...US_VEHICLE, distance_input: "trip" } as const;
 
 function fuelEntry(partial: Partial<Entry>): Entry {
   return {
@@ -174,6 +179,66 @@ describe("legacy rows", () => {
     const stats = computeFuelStats(entries, vehicle);
     expect(stats.intervals).toHaveLength(1);
     expect(stats.current).toBeCloseTo(30, 5);
+  });
+});
+
+// ---------- trip-based distance input ----------
+
+describe("trip-based vehicles", () => {
+  it("reconstruct an odometer from trip legs and compute the same economy", () => {
+    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    // No odometers — just distance-since-last-fill per tank.
+    const entries: Entry[] = [
+      fuelEntry({ date: "2026-01-01", trip_miles: 300, gallons: 10 }), // first full = anchor
+      fuelEntry({ date: "2026-01-08", trip_miles: 300, gallons: 10 }), // 300 mi / 10 = 30 mpg
+      fuelEntry({ date: "2026-01-15", trip_miles: 300, gallons: 12 }), // 300 mi / 12 = 25 mpg
+    ];
+
+    const stats = computeFuelStats(entries, vehicle);
+    expect(stats.intervals).toHaveLength(2);
+    expect(stats.best).toBeCloseTo(30, 5);
+    expect(stats.worst).toBeCloseTo(25, 5);
+    expect(stats.lifetime).toBeCloseTo(600 / 22, 5);
+  });
+
+  it("roll a partial trip leg forward into the next full tank", () => {
+    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    const entries: Entry[] = [
+      fuelEntry({ date: "2026-01-01", trip_miles: 200, gallons: 10 }), // anchor
+      fuelEntry({ date: "2026-01-05", trip_miles: 150, gallons: 5, is_full_tank: false }), // partial
+      fuelEntry({ date: "2026-01-10", trip_miles: 150, gallons: 5 }), // full: 300 mi / (5+5)
+    ];
+    const stats = computeFuelStats(entries, vehicle);
+    expect(stats.intervals).toHaveLength(1);
+    expect(stats.current).toBeCloseTo(30, 5); // 300 / 10
+  });
+
+  it("anchor trip legs onto an earlier real odometer reading", () => {
+    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    // A historic odometer fill, then the driver switches to logging trips.
+    const entries: Entry[] = [
+      fuelEntry({ date: "2026-01-01", odometer: 1000, gallons: 10 }), // real reading = anchor
+      fuelEntry({ date: "2026-01-08", trip_miles: 300, gallons: 10 }), // 300 mi / 10 = 30 mpg
+    ];
+    const stats = computeFuelStats(entries, vehicle);
+    expect(stats.intervals).toHaveLength(1);
+    expect(stats.current).toBeCloseTo(30, 5);
+    // openTankState should report distance covered since the last full tank.
+    const open = openTankState(toFuelFills(entries, vehicle));
+    expect(open.lastFullOdometerKm).toBeCloseTo(toKmMi(1300), 3);
+  });
+
+  it("break the chain on a missed fill just like odometer vehicles", () => {
+    const vehicle = { ...US_TRIP_VEHICLE } as Vehicle;
+    const entries: Entry[] = [
+      fuelEntry({ date: "2026-01-01", trip_miles: 300, gallons: 10 }), // anchor
+      fuelEntry({ date: "2026-01-08", trip_miles: 300, gallons: 10 }), // 30 mpg
+      fuelEntry({ date: "2026-01-15", trip_miles: 300, gallons: 10, missed_fill: true }), // re-anchor
+      fuelEntry({ date: "2026-01-22", trip_miles: 300, gallons: 10 }), // 30 mpg
+    ];
+    const stats = computeFuelStats(entries, vehicle);
+    expect(stats.intervals).toHaveLength(2);
+    expect(stats.intervals.every((iv) => Math.abs(iv.economy! - 30) < 1e-6)).toBe(true);
   });
 });
 
