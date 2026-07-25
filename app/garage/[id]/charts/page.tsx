@@ -1,39 +1,36 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Entry } from "@/lib/types";
+import { computeStats, toFuelFills } from "@/lib/fuel/economy";
+import { type EconomyUnit, economyLabel } from "@/lib/fuel/units";
+import type { Entry, Vehicle } from "@/lib/types";
 import { MpgChart, MonthlyCostChart, CostByTypeChart } from "./charts-view";
 import type { MpgPoint, CostPoint, CostByType } from "./charts-view";
 
-function buildMpgData(entries: Entry[]): MpgPoint[] {
-  const fmtLabel = (e: Entry) =>
-    new Date(e.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+type VehicleUnits = Pick<Vehicle, "distance_unit" | "volume_unit" | "economy_unit">;
 
-  // Per-entry: stored mpg > trip_miles/gallons
-  const perEntry = entries
-    .filter((e) => e.type === "fuel")
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .flatMap((e): MpgPoint[] => {
-      if (e.mpg != null && e.mpg > 0) return [{ label: fmtLabel(e), mpg: e.mpg }];
-      if (e.trip_miles != null && e.trip_miles > 0 && e.gallons != null && e.gallons > 0)
-        return [{ label: fmtLabel(e), mpg: e.trip_miles / e.gallons }];
-      return [];
-    });
+// The economy trend is the sequence of full-to-full intervals from the engine.
+// Imported readings (stored mpg, no odometer) are appended as a separate series
+// so history stays visible without polluting the derived figures.
+function buildEconomyData(entries: Entry[], units: VehicleUnits): MpgPoint[] {
+  const fmtLabel = (date: string) =>
+    new Date(date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  if (perEntry.length > 0) return perEntry;
+  const unit = units.economy_unit;
 
-  // Odometer fallback
-  const fullTanks = entries
-    .filter((e) => e.type === "fuel" && e.mpg == null && e.trip_miles == null && e.is_full_tank === true && e.odometer != null && e.gallons != null)
-    .sort((a, b) => (a.odometer ?? 0) - (b.odometer ?? 0));
+  const derived: (MpgPoint & { date: string })[] = computeStats(toFuelFills(entries, units), unit)
+    .intervals.filter((iv) => iv.valid && iv.economy != null)
+    .map((iv) => ({ label: fmtLabel(iv.date), mpg: iv.economy!, date: iv.date }));
 
-  const points: MpgPoint[] = [];
-  for (let i = 1; i < fullTanks.length; i++) {
-    const miles = (fullTanks[i].odometer ?? 0) - (fullTanks[i - 1].odometer ?? 0);
-    const gallons = fullTanks[i].gallons ?? 0;
-    if (gallons > 0 && miles > 0) points.push({ label: fmtLabel(fullTanks[i]), mpg: miles / gallons });
-  }
-  return points;
+  // Legacy mpg readings only make sense on an mpg axis; skip them for metric units.
+  const showLegacy = unit === "mpg_us" || unit === "mpg_uk";
+  const legacy: (MpgPoint & { date: string })[] = showLegacy
+    ? entries
+        .filter((e) => e.type === "fuel" && e.mpg != null && e.mpg > 0 && e.odometer == null)
+        .map((e) => ({ label: fmtLabel(e.date), mpg: e.mpg!, date: e.date, legacy: true }))
+    : [];
+
+  return [...derived, ...legacy].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function buildMonthlyCostData(entries: Entry[]): CostPoint[] {
@@ -92,7 +89,7 @@ export default async function ChartsPage({
 
   const { data: vehicle } = await supabase
     .from("vehicles")
-    .select("year, make, model, nickname")
+    .select("year, make, model, nickname, distance_unit, volume_unit, economy_unit")
     .eq("id", id)
     .single();
 
@@ -109,7 +106,9 @@ export default async function ChartsPage({
     vehicle.nickname ??
     [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
 
-  const mpgData = buildMpgData(allEntries);
+  const econUnit = vehicle.economy_unit as EconomyUnit;
+  const economyData = buildEconomyData(allEntries, vehicle);
+  const economyLabelText = economyLabel[econUnit];
   const monthlyCostData = buildMonthlyCostData(allEntries);
   const costByTypeData = buildCostByTypeData(allEntries);
 
@@ -131,10 +130,10 @@ export default async function ChartsPage({
       <div className="mx-auto w-full max-w-lg px-4 py-6 flex flex-col gap-6">
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            MPG trend
+            Economy trend <span className="font-normal normal-case tracking-normal text-zinc-400">({economyLabelText})</span>
           </h2>
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-            <MpgChart data={mpgData} />
+            <MpgChart data={economyData} unit={economyLabelText} />
           </div>
         </section>
 
