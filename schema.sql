@@ -15,6 +15,8 @@ create table public.vehicles (
   nickname      text,
   vin           text,
   photo_url     text,
+  photo_focus_x smallint not null default 50 check (photo_focus_x between 0 and 100),
+  photo_focus_y smallint not null default 50 check (photo_focus_y between 0 and 100),
   distance_unit text not null default 'mi'     check (distance_unit in ('mi','km')),
   volume_unit   text not null default 'gal_us' check (volume_unit in ('gal_us','gal_uk','l')),
   economy_unit  text not null default 'mpg_us' check (economy_unit in ('mpg_us','mpg_uk','l_100km','km_l')),

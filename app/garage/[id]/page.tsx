@@ -134,6 +134,9 @@ export default async function VehiclePage({
             src={vehicle.photo_url}
             alt={vehicleTitle}
             className="h-full w-full object-cover"
+            style={{
+              objectPosition: `${vehicle.photo_focus_x ?? 50}% ${vehicle.photo_focus_y ?? 50}%`,
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         </div>

@@ -29,6 +29,13 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
   const nickname = String(formData.get("nickname") ?? "").trim() || null;
   const vin = String(formData.get("vin") ?? "").trim() || null;
 
+  const clampFocus = (raw: FormDataEntryValue | null) => {
+    const n = Math.round(Number(raw));
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50;
+  };
+  const photo_focus_x = clampFocus(formData.get("photo_focus_x"));
+  const photo_focus_y = clampFocus(formData.get("photo_focus_y"));
+
   if (!make || !model) return;
 
   // Handle photo
@@ -52,7 +59,15 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
     photo_url = publicUrl;
   }
 
-  const updateData: Record<string, unknown> = { year, make, model, nickname, vin };
+  const updateData: Record<string, unknown> = {
+    year,
+    make,
+    model,
+    nickname,
+    vin,
+    photo_focus_x,
+    photo_focus_y,
+  };
   if (photo_url !== undefined) updateData.photo_url = photo_url;
 
   const { error } = await supabase

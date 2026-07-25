@@ -52,7 +52,13 @@ export default async function EditVehiclePage({
 
       <div className="mx-auto w-full max-w-lg px-4 py-6">
         <form action={handleUpdate} className="flex flex-col gap-3">
-          <PhotoUpload currentUrl={vehicle.photo_url ?? null} />
+          <PhotoUpload
+            currentUrl={vehicle.photo_url ?? null}
+            currentFocus={{
+              x: vehicle.photo_focus_x ?? 50,
+              y: vehicle.photo_focus_y ?? 50,
+            }}
+          />
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">
               <label htmlFor="year" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Year</label>

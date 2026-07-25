@@ -13,6 +13,8 @@ export interface Vehicle {
   nickname: string | null;
   vin: string | null;
   photo_url: string | null;
+  photo_focus_x: number; // 0–100, object-position X% for the photo crop
+  photo_focus_y: number; // 0–100, object-position Y% for the photo crop
   distance_unit: DistanceUnit;
   volume_unit: VolumeUnit;
   economy_unit: EconomyUnit;

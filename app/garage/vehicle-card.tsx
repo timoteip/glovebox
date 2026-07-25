@@ -142,6 +142,9 @@ export function VehicleCard({
             src={vehicle.photo_url}
             alt={title}
             className="h-12 w-12 flex-shrink-0 rounded-lg object-cover"
+            style={{
+              objectPosition: `${vehicle.photo_focus_x ?? 50}% ${vehicle.photo_focus_y ?? 50}%`,
+            }}
           />
         ) : (
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
