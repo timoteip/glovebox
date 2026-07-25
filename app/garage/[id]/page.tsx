@@ -128,21 +128,20 @@ export default async function VehiclePage({
         </form>
       </header>
 
-      {vehicle.photo_url && (
-        <div className="relative h-52 w-full overflow-hidden">
-          <img
-            src={vehicle.photo_url}
-            alt={vehicleTitle}
-            className="h-full w-full object-cover"
-            style={{
-              objectPosition: `${vehicle.photo_focus_x ?? 50}% ${vehicle.photo_focus_y ?? 50}%`,
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        </div>
-      )}
-
       <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-32 py-6">
+        {vehicle.photo_url && (
+          <div className="relative mb-4 h-52 w-full overflow-hidden rounded-xl">
+            <img
+              src={vehicle.photo_url}
+              alt={vehicleTitle}
+              className="h-full w-full object-cover"
+              style={{
+                objectPosition: `${vehicle.photo_focus_x ?? 50}% ${vehicle.photo_focus_y ?? 50}%`,
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+          </div>
+        )}
         <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
           {vehicleTitle}
         </h1>
