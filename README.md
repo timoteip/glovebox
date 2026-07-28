@@ -1,57 +1,48 @@
 # GloveBox
 
-A small web app for keeping track of your cars: log fuel fills, see real
-fuel economy over time, and get reminded about maintenance. It's the kind of
-thing a paper logbook in the glovebox used to do.
+A web app for keeping track of your cars. Log your fill-ups, see what gas mileage you're really getting, and get reminded when maintenance is due — the job the paper logbook in your glovebox used to do.
 
-## Features
+## What it does
 
-- A garage of vehicles, each with its own photo, details and default view.
-- Fuel logging with per-fill odometer **or** trip distance — mix them freely.
-- Fuel economy the Fuelly way: full-to-full intervals, partial fills rolled
-  forward, missed fills breaking the chain instead of reporting bad numbers.
-  Lifetime / best / worst / current figures, plus a trend chart.
-- US and metric units throughout (US mpg, UK mpg, L/100 km, km/L).
-- Maintenance reminders you can edit inline.
-- Email/password and Google sign-in.
+- Keep a list of your vehicles, each with a photo and its own details
+- Log every fill-up — enter the odometer reading or just the trip distance, whichever you have
+- Works out your real fuel economy from those fill-ups, instead of the number on the window sticker
+- Shows your lifetime, best, worst, and most recent figures, plus a chart of how they're trending
+- Skips a calculation rather than showing a wrong number when a fill-up is missing
+- Works in US mpg, UK mpg, L/100 km, or km/L
+- Maintenance reminders you can edit right in the list
+- Sign in with email and password, or with a Google account
 
-## Stack
+## Built with
 
-- [Next.js](https://nextjs.org) (App Router, Server Components, Server Actions)
-- [Supabase](https://supabase.com) — Postgres, Auth, Storage, row-level security
-- Tailwind CSS, Recharts, Vitest
+- **Next.js** – Builds the app.
+- **Supabase** – Stores everything (vehicles, fill-ups, photos) and handles sign-ins. It also makes sure each person can only see their own data.
+- **Tailwind CSS** – Styles the app.
+- **Recharts** – Draws the charts.
+- **Vitest** – Runs automatic checks on the fuel economy math.
 
-## Running locally
+## Getting started
 
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Create a Supabase project and run `schema.sql` against it (SQL editor or
-   `psql`). This sets up the tables, storage bucket and RLS policies.
-
-3. Copy the env template and fill in your project values (Project Settings →
-   API in the Supabase dashboard):
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-4. Start the dev server:
-
-   ```bash
-   npm run dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000).
-
-## Tests
+**1. Install the dependencies:**
 
 ```bash
-npm test
+npm install
 ```
 
-The fuel-economy engine (`lib/fuel/`) is the part with real logic worth
-testing; the reasoning behind how it works lives in `docs/decisions.md`.
+**2. Set up the database.** Create a free project at [supabase.com](https://supabase.com), then paste the contents of `schema.sql` into its SQL editor and run it. That creates the tables the app needs.
+
+**3. Add your Supabase keys.** Copy the template, then fill in the values from your Supabase dashboard under Project Settings → API:
+
+```bash
+cp .env.example .env.local
+```
+
+**4. Start it up:**
+
+```bash
+npm run dev
+```
+
+Then open http://localhost:3000 in your browser.
+
+To run the automated tests: `npm test`
